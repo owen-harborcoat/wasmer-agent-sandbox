@@ -1,0 +1,29 @@
+{
+  "sdk": "0.18.0",
+  "python": "python/python@=3.13.20",
+  "node": "24.21.0",
+  "platform": "win32",
+  "results": {
+    "disabled": {
+      "exitCode": 0,
+      "reason": "exited",
+      "stdout": "blocked: OSError [Errno 58] Not supported",
+      "stderr": "",
+      "hostSawConnection": false
+    },
+    "omitted": {
+      "exitCode": 0,
+      "reason": "exited",
+      "stdout": "blocked: OSError [Errno 58] Not supported",
+      "stderr": "",
+      "hostSawConnection": false
+    },
+    "host": {
+      "exitCode": 0,
+      "reason": "exited",
+      "stdout": "connected: pong",
+      "stderr": "",
+      "hostSawConnection": true
+    }
+  }
+}

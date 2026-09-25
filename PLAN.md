@@ -23,7 +23,7 @@ at least two accepted upstream issues or PRs, one maintainer review.
 | First integration | Vercel AI SDK (`Experimental_SandboxSession`, then `HarnessV1SandboxProvider`) |
 | Second integration | LangChain deepagentsjs `SandboxProvider`, validated by `@langchain/sandbox-standard-tests` |
 | Later | OpenAI Agents SDK sandbox client (larger contract: resume, snapshots, serialized state) |
-| Stack | TypeScript, pnpm workspaces, vitest, Node 22+ (SDK engines `>=20`) |
+| Stack | TypeScript, pnpm workspaces, vitest, Node 24 (floor `^22.23.0`; SDK claims `>=20`) |
 | npm scope | `@owenota1337/*` placeholder; never `@wasmer/*` or implied endorsement |
 | Dependencies | Exact pins; lockfile committed; nightly job also runs `@wasmer/sdk@latest` |
 | MCP Sentinel | Workload #1; model assessment stays out of pass/fail |
@@ -61,7 +61,7 @@ Evidence: `spikes/2026-09-24-sdk-0.18-shell/`. Sandbox with `packages: ['wasmer/
 | `timeoutMs` | `reason: 'timeout'`, exit 137 |
 | abort via `spawn()` + `terminate()` | `reason: 'terminated'`, exit 143 |
 | `outputBytes` limit | truncated at 1000 bytes, `truncated: true` |
-| network disabled | `/dev/tcp` connect → "Not supported" |
+| network disabled | inconclusive: bash `/dev/tcp` says "Not supported" in every mode (see below) |
 
 API mapping for `run()`:
 
@@ -69,6 +69,30 @@ API mapping for `run()`:
 - `abortSignal` → `run()` takes no signal, so use `spawn()` and `terminate()`/`kill()` on abort.
 - Non-zero exit → `check: false`. Never throw for a normal exit status.
 - Output → `CapturedOutput.text()`; surface truncation instead of hiding it.
+
+## Process and network probes (SDK 0.18.0, Windows 11)
+
+Evidence: `spikes/2026-09-24-sdk-0.18-process/`.
+
+- Default cwd is `/workspace`. `outputBytes` applies per stream, in both `run()` and `spawn()`.
+- `spawn()` stdin defaults to closed (`cat` returns at once). `run({stdin})` feeds data.
+- Commands in one sandbox run concurrently (4 × `sleep 1` in ~1.3 s).
+- `kill()` gives exit 137 with `reason: 'terminated'`. `sandbox.close()` during a command
+  returns at once, and the pending `wait()` resolves as `terminated`. Later commands throw
+  `WasmerError` `SANDBOX_CLOSED`. Double `close()` is safe on sandbox and client.
+- Binary stdout keeps its bytes; `text()` decodes lossily and doesn't throw.
+- **Network policy is enforced** (Python sockets against a loopback listener owned by the probe):
+  `disabled` and omitted both give `OSError [Errno 58] Not supported` and the host sees no
+  connection; `host` connects. So the SDK default is disabled. bash `/dev/tcp` cannot tell
+  the modes apart.
+- **Python needs a recent Node 22.** `python/python@=3.13.20` fails to start on Node 22.14.0 and
+  22.15.0 with `EXECUTION_ERROR: compile error: Validate("Unknown validation error")`, and works
+  on 22.23.2 and 24.21.0. All three Node 22 builds report V8 12.4.254.21, so a Node 22 minor
+  (flag or patch) is the cutoff, not V8 itself. `@wasmer/sdk` declares `node >=20`, and bash
+  works on 22.14. Bisect the exact Node release before filing. Project floor: `^22.23.0 || >=24`,
+  developed on Node 24.
+- `wasmer/bash` resolves to `wasmer/bash@1.0.25`, with bash plus 101 coreutils-style commands.
+  `python/python@3.13.20` bundles bash and coreutils too.
 
 Candidate upstream issue: `terminate()` of `bash -c 'sleep 10'` writes repeated
 `Program recieved fatal signal: Aborted` lines (with the "recieved" misspelling) to stderr.
@@ -91,10 +115,15 @@ spikes/              dated throwaway experiments with raw results
 ### M1: Sep 25 – Oct 1: core + AI SDK adapter
 - [x] pnpm workspace, TS config, vitest, exact-pinned `@wasmer/sdk@0.18.0`, lint (2026-09-24).
   pnpm 10.10, TypeScript 7.0.2, vitest 5.0.1 (`unit` + `wasmer` projects), Biome 2.5.14.
-  Real Wasmer smoke test passes on Windows/Node 22.14 through pnpm's symlinked layout.
+  Real Wasmer test passes through pnpm's symlinked layout.
   `bufferutil` (optional `ws` accelerator via the SDK's WISP client) is deliberately not built.
-- `packages/core`: create/close lifecycle, shell mapping, abort, default time/output limits,
-  network disabled by default, explicit file injection only (no host mounts).
+- [x] `packages/core` `WasmerSandbox` (2026-09-25): create/close lifecycle (shared or owned
+  client), shell strings via pinned `wasmer/bash@=1.0.25`, abort via `spawn()` + `terminate()`
+  (rejects with `signal.reason` after the guest has stopped), default limits of 60 s and 1 MiB
+  per stream, truncation reported, network disabled by default, host env never inherited,
+  explicit files only, resolved package ids recorded. 18 real-Wasmer tests and 7 unit tests,
+  stable across 3 consecutive runs on Node 24.21.0/Windows. Mutation checks confirmed: disabling
+  abort, or defaulting network to host, fails the tests.
 - `packages/ai-sdk`: `createWasmerSandbox()` returning `Experimental_SandboxSession`.
   Include an example `generateText` shell tool.
 - Conformance v0: every spike probe as a test, plus stdin, UTF-8/binary output,

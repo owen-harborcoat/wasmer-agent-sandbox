@@ -1,0 +1,26 @@
+file:///C:/Users/oweng/OneDrive/Documents/Claude%20Code/wasmer-agent-sandbox/node_modules/.pnpm/@wasmer+sdk@0.18.0/node_modules/@wasmer/sdk/dist/index.js:79
+            return new WasmerError(error.message, code, {
+                   ^
+
+WasmerError: command execution failed: unable to spawn the command: compile error: Validate("Unknown validation error")
+    at toWasmerError (file:///C:/Users/oweng/OneDrive/Documents/Claude%20Code/wasmer-agent-sandbox/node_modules/.pnpm/@wasmer+sdk@0.18.0/node_modules/@wasmer/sdk/dist/index.js:79:20)
+    at rethrow (file:///C:/Users/oweng/OneDrive/Documents/Claude%20Code/wasmer-agent-sandbox/node_modules/.pnpm/@wasmer+sdk@0.18.0/node_modules/@wasmer/sdk/dist/index.js:62:15)
+    at async Command.run (file:///C:/Users/oweng/OneDrive/Documents/Claude%20Code/wasmer-agent-sandbox/node_modules/.pnpm/@wasmer+sdk@0.18.0/node_modules/@wasmer/sdk/dist/index.js:857:40)
+    at async file:///C:/Users/oweng/OneDrive/Documents/Claude%20Code/wasmer-agent-sandbox/spikes/2026-09-24-sdk-0.18-process/network.mjs:41:15 {
+  code: 'EXECUTION_ERROR',
+  [cause]: Error [WasmerError]: command execution failed: unable to spawn the command: compile error: Validate("Unknown validation error")
+      at __wbg_new_b667d279fd5aa943 (file:///C:/Users/oweng/OneDrive/Documents/Claude%20Code/wasmer-agent-sandbox/node_modules/.pnpm/@wasmer+sdk@0.18.0/node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:1987:25)
+      at wasm://wasm/01254326:wasm-function[6867]:0x3f7b35
+      at wasm://wasm/01254326:wasm-function[3687]:0x3b9294
+      at wasm://wasm/01254326:wasm-function[2092]:0x32f1d7
+      at wasm://wasm/01254326:wasm-function[443]:0x11bf28
+      at wasm://wasm/01254326:wasm-function[1960]:0x31dfdc
+      at wasm://wasm/01254326:wasm-function[2813]:0x38511e
+      at wasm://wasm/01254326:wasm-function[4807]:0x3da8cc
+      at wasm://wasm/01254326:wasm-function[6185]:0x3eeea7
+      at wasm_bindgen_569eb95f3a8fb3d6___convert__closures_____invoke___wasm_bindgen_569eb95f3a8fb3d6___JsValue__core_d7559254c0ef046e___result__Result_____wasm_bindgen_569eb95f3a8fb3d6___JsError___true_ (file:///C:/Users/oweng/OneDrive/Documents/Claude%20Code/wasmer-agent-sandbox/node_modules/.pnpm/@wasmer+sdk@0.18.0/node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:2605:22) {
+    code: 'EXECUTION_ERROR'
+  }
+}
+
+Node.js v22.14.0

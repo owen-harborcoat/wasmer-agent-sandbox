@@ -1,0 +1,196 @@
+{
+  "sdk": "0.18.0",
+  "node": "22.14.0",
+  "platform": "win32",
+  "loopbackConnections": 0,
+  "results": {
+    "default-cwd": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "reason": "exited",
+        "stdout": "/workspace\n",
+        "stdoutBytes": 11,
+        "stdoutTruncated": false,
+        "stderr": "",
+        "stderrBytes": 0,
+        "stderrTruncated": false
+      },
+      "ms": 162
+    },
+    "spawn-capture-limits": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "reason": "exited",
+        "stdout": "o\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\n",
+        "stdoutBytes": 1000,
+        "stdoutTruncated": true,
+        "stderr": "e\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\n",
+        "stderrBytes": 1000,
+        "stderrTruncated": true
+      },
+      "ms": 437
+    },
+    "run-limit-per-stream": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "reason": "exited",
+        "stdout": "o\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\no\n",
+        "stdoutBytes": 1000,
+        "stdoutTruncated": true,
+        "stderr": "e\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\ne\n",
+        "stderrBytes": 1000,
+        "stderrTruncated": true
+      },
+      "ms": 120
+    },
+    "spawn-stdin-closed-cat": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "reason": "exited",
+        "stdout": "done\n",
+        "stdoutBytes": 5,
+        "stdoutTruncated": false,
+        "stderr": "",
+        "stderrBytes": 0,
+        "stderrTruncated": false
+      },
+      "ms": 122
+    },
+    "spawn-default-stdin-cat": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "reason": "exited",
+        "stdout": "done\n",
+        "stdoutBytes": 5,
+        "stdoutTruncated": false,
+        "stderr": "",
+        "stderrBytes": 0,
+        "stderrTruncated": false
+      },
+      "ms": 71
+    },
+    "run-stdin-data": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "reason": "exited",
+        "stdout": "HELLO\n",
+        "stdoutBytes": 6,
+        "stdoutTruncated": false,
+        "stderr": "",
+        "stderrBytes": 0,
+        "stderrTruncated": false
+      },
+      "ms": 53
+    },
+    "command-not-found": {
+      "ok": true,
+      "value": {
+        "exitCode": 127,
+        "reason": "exited",
+        "stdout": "",
+        "stdoutBytes": 0,
+        "stdoutTruncated": false,
+        "stderr": "bash: line 1: nosuchcmd: command not found\n",
+        "stderrBytes": 43,
+        "stderrTruncated": false
+      },
+      "ms": 18
+    },
+    "concurrent-4": {
+      "ok": true,
+      "value": {
+        "wallMs": 1282,
+        "stdout": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ]
+      },
+      "ms": 1282
+    },
+    "binary-stdout": {
+      "ok": true,
+      "value": {
+        "bytes": [
+          0,
+          255,
+          254
+        ],
+        "text": "\"\\u0000��\""
+      },
+      "ms": 50
+    },
+    "kill": {
+      "ok": true,
+      "value": {
+        "exitCode": 137,
+        "reason": "terminated",
+        "stdout": "",
+        "stdoutBytes": 0,
+        "stdoutTruncated": false,
+        "stderr": "",
+        "stderrBytes": 0,
+        "stderrTruncated": false
+      },
+      "ms": 225
+    },
+    "default-network-loopback": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "reason": "exited",
+        "stdout": "blocked\n",
+        "stdoutBytes": 8,
+        "stdoutTruncated": false,
+        "stderr": "bash: connect: Not supported\nbash: line 1: /dev/tcp/127.0.0.1/57732: Not supported\n",
+        "stderrBytes": 83,
+        "stderrTruncated": false
+      },
+      "ms": 46
+    },
+    "disabled-network-loopback": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "reason": "exited",
+        "stdout": "blocked\n",
+        "stdoutBytes": 8,
+        "stdoutTruncated": false,
+        "stderr": "bash: connect: Not supported\nbash: line 1: /dev/tcp/127.0.0.1/57732: Not supported\n",
+        "stderrBytes": 83,
+        "stderrTruncated": false
+      },
+      "ms": 41
+    },
+    "close-while-running": {
+      "ok": true,
+      "value": {
+        "closeMs": 0,
+        "settled": {
+          "exitCode": 137,
+          "reason": "terminated",
+          "stdout": "",
+          "stdoutBytes": 0,
+          "stdoutTruncated": false,
+          "stderr": "",
+          "stderrBytes": 0,
+          "stderrTruncated": false
+        }
+      },
+      "ms": 34
+    },
+    "shell-after-close": {
+      "ok": false,
+      "error": "WasmerError[SANDBOX_CLOSED]: the sandbox is closed",
+      "ms": 1,
+      "isWasmerError": true
+    }
+  }
+}
