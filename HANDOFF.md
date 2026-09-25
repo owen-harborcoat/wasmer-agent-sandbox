@@ -23,11 +23,15 @@ Next: LangChain deepagentsjs. Target ~2026-11-07 (see PLAN.md for the four miles
 | `a54ac29` | core file I/O (`/workspace` only), streaming `spawn`, `HOME=/workspace/.home` |
 | `c700a79` | `packages/ai-sdk`: `createWasmerSandbox()` → `HarnessV1SandboxProvider`, full `Experimental_SandboxSession`; host-side timeout backstop |
 | `1730442` | redacted local paths in a saved stack trace |
+| `e541ecc` | CI: `ubuntu-24.04` + `windows-2025` × Node 24.21.0 + 22.23.0, nightly `sdk-latest` job that reports |
+| `0edb991` | timeout bug confirmed on Linux; SIGPIPE stderr-noise probe; truncation tests moved off `yes \| head` |
 
-Verification (Windows 11, Node 24.21.0, `@wasmer/sdk` 0.18.0): 48 real-Wasmer tests + 7 unit tests,
-11 consecutive clean full runs. Mutation checks confirm that the abort, network-default and timeout
-backstop tests fail when the behaviour is removed. **Not yet verified:** Linux, CI, live models,
-other SDK versions.
+Verification (`@wasmer/sdk` 0.18.0): locally on Windows 11 / Node 24.21.0, 48 real-Wasmer tests +
+7 unit tests, 11 consecutive clean full runs. CI run 36189376746 is green on all four legs
+(Linux + Windows × Node 24.21.0 + 22.23.0). Mutation checks confirm that the abort, network-default
+and timeout backstop tests fail when the behaviour is removed. **Not yet verified:** live models,
+other SDK versions, and a scheduled nightly run (the manual `sdk-latest` dispatch works; it ran 0.18.0
+because no newer SDK existed).
 
 ## Run it
 
@@ -40,27 +44,29 @@ fnm exec --using=24 pnpm.cmd check        # lint + typecheck + unit tests
 fnm exec --using=24 pnpm.cmd test:wasmer  # real sandboxes, ~15 s warm
 ```
 
+CI: `.github/workflows/ci.yml`. Every leg uploads `results-<os>-node<ver>` with the vitest JSON,
+the timeout repro, the SIGPIPE probe and `provenance.json`. Trigger the latest-SDK job by hand with
+`gh workflow run ci.yml --ref main`.
+
 In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use `pnpm.cmd`. Don't pipe
 `pnpm check` into `tail` when you need its exit code.
 
 ## Next steps, in order
 
-1. **CI** (`.github/workflows/ci.yml`): Windows + Ubuntu, Node 24 (and 22.23+), pinned SDK. Run
-   `pnpm check` and `pnpm test:wasmer`, and cache `.wasmer/`. Add a nightly job against
-   `@wasmer/sdk@latest` that reports rather than fails the build. The repo now exists, so this can be
-   verified for real.
-2. **Confirm the timeout bug on Linux**: run `spikes/2026-09-25-sdk-0.18-timeout/repro.mjs` in CI
-   and save the output next to `results-win32.json`.
-3. **Draft upstream issues** for `wasmerio/wasmer-sdk` (draft only; filing needs the user's go-ahead):
-   - First command of a new client ignores `timeoutMs` while sleeping (repro ready).
+1. **Check the first scheduled nightly** (05:23 UTC) ran and that its `sdk-latest` summary reads
+   right. When a newer SDK ships, confirm the job goes yellow (warning), not red, on failures.
+2. **Draft upstream issues** for `wasmerio/wasmer-sdk` (draft only; filing needs the user's go-ahead):
+   - First command of a new client ignores `timeoutMs` while sleeping (repro ready; Windows + Linux).
    - Python guest fails on Node 22.14/22.15 with `Validate("Unknown validation error")` while
      `engines` says `>=20`. Bisect the Node 22 release first.
    - Missing file → generic `FILESYSTEM_ERROR` ("entry not found"); ask for a distinct code.
    - Docs: only `/workspace` persists between commands; other paths are per-process.
-   - `terminate()` stderr noise ("Program recieved fatal signal"); confirm with a minimal case.
-4. **SDK version comparison**: run the suite against 0.11.0 (the hackathon pin) and 0.18.0, and
+   - Signal noise in guest stderr: SIGPIPE'd `yes | head` writes `Program recieved termination
+     signal: Broken pipe` + repeated `fatal signal: Aborted` into the command's stderr (30–60% of runs
+     on Windows runners, a few % on Linux; probe ready). `terminate()` shows the same lines.
+3. **SDK version comparison**: run the suite against 0.11.0 (the hackathon pin) and 0.18.0, and
    record the differences.
-5. **M2**: LangChain deepagentsjs provider tested with `@langchain/sandbox-standard-tests`; run a
+4. **M2**: LangChain deepagentsjs provider tested with `@langchain/sandbox-standard-tests`; run a
    real port-less `HarnessAgent` harness on the Wasmer provider; explore ports in `network: host`
    mode (it would allow bridge-backed harnesses); port the MCP Sentinel fixture as workload #1.
 
@@ -82,6 +88,10 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
 - The export condition is `wasmer-agent-sandbox-source`. A generic `source` name collided with a
   third-party package's own condition.
 - Vitest `wasmer` project runs files serially; each test file creates its own `Wasmer` client.
+- Don't use `yes | head` (or anything that dies of SIGPIPE) in assertions on stderr: the runtime can
+  add noise lines. Generate output with `printf` instead. This machine never shows it; CI runners do.
+- The `.wasmer` cache key hashes the lockfile and package sources/tests, so most commits restore
+  from a partial match (`wasmerCache: "partial"` in provenance).
 - `@wasmer/sdk` releases near-daily. Check `npm view @wasmer/sdk version` before assuming 0.18.0 is current.
 
 ## Rules that still apply

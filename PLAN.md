@@ -97,7 +97,8 @@ Evidence: `spikes/2026-09-24-sdk-0.18-process/`.
   on 22.23.2 and 24.21.0. All three Node 22 builds report V8 12.4.254.21, so a Node 22 minor
   (flag or patch) is the cutoff, not V8 itself. `@wasmer/sdk` declares `node >=20`, and bash
   works on 22.14. Bisect the exact Node release before filing. Project floor: `^22.23.0 || >=24`,
-  developed on Node 24.
+  developed on Node 24. The floor itself (22.23.0), Python tests included, passes in CI on Linux and
+  Windows.
 - `wasmer/bash` resolves to `wasmer/bash@1.0.25`, with bash plus 101 coreutils-style commands.
   `python/python@3.13.20` bundles bash and coreutils too.
 
@@ -118,13 +119,29 @@ Evidence: `spikes/2026-09-25-sdk-0.18-fs/`, `spikes/2026-09-25-sdk-0.18-timeout/
   deterministic and happens per client, not per process: `sleep 3` with `timeoutMs: 500` ran 3238 ms and 3361 ms as each
   new client's first command, and ~700 ms afterwards. CPU-bound first commands are killed on time, and
   `terminate()`/`kill()` still work. The core adds a host-side backstop (kill at `timeoutMs` + 250 ms)
-  and reports `timeout`. Minimal repro ready to file.
+  and reports `timeout`. Minimal repro ready to file. **Confirmed on Linux** (2026-09-25, CI run
+  36189376746, GitHub `ubuntu-24.04`, kernel 6.17 Azure, Node 22.23.0 and 24.21.0): first commands
+  ran 3143–3313 ms, second commands 580–628 ms, CPU-bound 643–686 ms. The `windows-2025` runners
+  match. Evidence: `results-linux.json` next to `results-win32.json`.
 - A new client's first two-process pipeline takes ~400 ms; later ones take 110–240 ms. Killed and
   timed-out guests leave no host CPU behind.
 
-Candidate upstream issue: `terminate()` of `bash -c 'sleep 10'` writes repeated
-`Program recieved fatal signal: Aborted` lines (with the "recieved" misspelling) to stderr.
-Confirm it reproduces with a minimal case before filing it.
+## Signal noise in guest stderr (SDK 0.18.0, CI runners, 2026-09-25)
+
+Evidence: `spikes/2026-09-25-sdk-0.18-sigpipe/` (probe runs in every CI leg; raw results in the
+CI artifacts `sigpipe-probe.json`).
+
+- When a pipeline member dies of SIGPIPE (`yes | head`), the runtime sometimes writes
+  `Program recieved termination signal: Broken pipe` plus repeated `Program recieved fatal signal:
+  Aborted` lines (with the "recieved" misspelling) into the **command's own stderr**. The exit code
+  stays 0. One noisy run added up to ~10 KB of stderr.
+- Frequency per 30 runs (CI run 36189376746): `windows-2025` 9–18 for each `yes | head` shape,
+  `ubuntu-24.04` 1–2 for `yes | head -c 1000` and 0 for the other shapes, local Windows 11 machine
+  0/90. A `printf` control never shows it. It looks timing-dependent (slower hosts show more).
+- It broke both truncation tests on the Windows runners; they now use `printf`. Agents pipe into
+  `head` constantly, so the noise reaches models as fake errors. Upstream issue candidate, together
+  with the earlier sighting: `terminate()` of `bash -c 'sleep 10'` writes the same `fatal signal:
+  Aborted` lines.
 
 ## Repository layout (target)
 
@@ -168,7 +185,10 @@ spikes/              dated throwaway experiments with raw results
 - Conformance v0: every spike probe as a test, plus stdin, UTF-8/binary output,
   large stderr, rapid sequential runs and close-while-running.
 - Provenance recorder (SDK version, package versions, Node, OS, cache state).
-- CI on GitHub Actions: Windows + Linux, pinned SDK; nightly `@wasmer/sdk@latest`.
+- [x] CI on GitHub Actions (2026-09-25): `.github/workflows/ci.yml`, `ubuntu-24.04` + `windows-2025`
+  × Node 24.21.0 + 22.23.0 (the declared floor), pinned SDK, actions pinned by SHA, `./.wasmer`
+  cached, results + provenance uploaded as artifacts. `sdk-latest` job (nightly + manual) reports
+  instead of failing. First green run: 36189376746 (48/48 real-Wasmer tests on all four legs).
 - Version comparison: run conformance v0 against SDK 0.11.0 and 0.18.0.
 
 ### M2: Oct 2 – 15: LangChain provider + workload #1
