@@ -56,6 +56,9 @@ jobs:
       - name: SDK timeout repro
         if: success() || failure()
         run: node spikes/2026-09-25-sdk-0.18-timeout/repro.mjs | tee "$RUNNER_TEMP/results/timeout-repro.json"
+      - name: SIGPIPE stderr probe
+        if: success() || failure()
+        run: node spikes/2026-09-25-sdk-0.18-sigpipe/probe.mjs 30 | tee "$RUNNER_TEMP/results/sigpipe-probe.json"
       - name: Provenance
         if: always()
         env:

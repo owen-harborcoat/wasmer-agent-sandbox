@@ -131,7 +131,9 @@ describe('WasmerSandbox', () => {
   });
 
   it('truncates each stream independently at outputBytes and says so', async () => {
-    const result = await sandbox.exec('yes o | head -c 5000; yes e | head -c 10 >&2', {
+    // printf, not `yes | head`: a SIGPIPE'd `yes` can add runtime lines to stderr (see
+    // spikes/2026-09-25-sdk-0.18-sigpipe).
+    const result = await sandbox.exec("printf 'o%.0s' {1..5000}; printf 'e%.0s' {1..10} >&2", {
       outputBytes: 1000,
     });
 

@@ -266,7 +266,8 @@ describe('WasmerSandboxSession limits', () => {
   it('tells the model on stderr when output is truncated', async () => {
     const session = await createWasmerSandbox({ limits: { outputBytes: 100 } }).createSession();
     try {
-      const truncated = await session.run({ command: 'yes | head -c 1000' });
+      // printf, not `yes | head`: see spikes/2026-09-25-sdk-0.18-sigpipe.
+      const truncated = await session.run({ command: "printf 'y\n%.0s' {1..500}" });
 
       expect(truncated).toEqual({
         exitCode: 0,

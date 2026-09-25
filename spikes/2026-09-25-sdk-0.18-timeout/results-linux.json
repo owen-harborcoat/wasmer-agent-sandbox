@@ -1,0 +1,51 @@
+{
+  "sdk": "0.18.0",
+  "node": "24.21.0",
+  "platform": "linux",
+  "osRelease": "6.17.0-1022-azure",
+  "arch": "x64",
+  "cache": "warm",
+  "timeoutMs": 500,
+  "results": [
+    {
+      "client": "client A",
+      "run": 1,
+      "command": "sleep 3",
+      "reason": "exited",
+      "exitCode": 0,
+      "ms": 3322
+    },
+    {
+      "client": "client A",
+      "run": 2,
+      "command": "sleep 3",
+      "reason": "timeout",
+      "exitCode": 137,
+      "ms": 611
+    },
+    {
+      "client": "client B",
+      "run": 1,
+      "command": "sleep 3",
+      "reason": "exited",
+      "exitCode": 0,
+      "ms": 3191
+    },
+    {
+      "client": "client B",
+      "run": 2,
+      "command": "sleep 3",
+      "reason": "timeout",
+      "exitCode": 137,
+      "ms": 607
+    },
+    {
+      "client": "client C",
+      "run": 1,
+      "command": "while true; do :; done",
+      "reason": "timeout",
+      "exitCode": 137,
+      "ms": 671
+    }
+  ]
+}
