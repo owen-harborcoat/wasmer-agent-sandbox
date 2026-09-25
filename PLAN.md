@@ -191,7 +191,7 @@ spikes/              dated throwaway experiments with raw results
 ### M4: Oct 31 – Nov 7: report + outreach
 - Technical report: compatibility matrix, latency, concurrency, cost, security boundaries.
 - Publish packages under `@owenota1337`. Open the LangChain docs-listing PR.
-- Maintainer review, then one concise update to the Wasmer CEO.
+- Maintainer review; share the report with the Wasmer team.
 
 ## Out of scope
 
