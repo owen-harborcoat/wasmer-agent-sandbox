@@ -1,0 +1,125 @@
+{
+  "node": "22.14.0",
+  "platform": "win32",
+  "sdk": "0.18.0",
+  "results": {
+    "create": {
+      "ok": true,
+      "value": "created",
+      "ms": 135
+    },
+    "echo": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "reason": "exited",
+        "stdout": "hello\n",
+        "stdoutLen": 6,
+        "stdoutTruncated": false,
+        "stderr": "err\n"
+      },
+      "ms": 153
+    },
+    "pipes+subshell": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "reason": "exited",
+        "stdout": "3\n",
+        "stdoutLen": 2,
+        "stdoutTruncated": false,
+        "stderr": ""
+      },
+      "ms": 293
+    },
+    "exit-code": {
+      "ok": true,
+      "value": {
+        "exitCode": 7,
+        "reason": "exited",
+        "stdout": "",
+        "stdoutLen": 0,
+        "stdoutTruncated": false,
+        "stderr": ""
+      },
+      "ms": 22
+    },
+    "cwd": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "reason": "exited",
+        "stdout": "/workspace/sub\nmarker.txt\n",
+        "stdoutLen": 26,
+        "stdoutTruncated": false,
+        "stderr": ""
+      },
+      "ms": 57
+    },
+    "env-merge": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "reason": "exited",
+        "stdout": "base extra\n",
+        "stdoutLen": 11,
+        "stdoutTruncated": false,
+        "stderr": ""
+      },
+      "ms": 25
+    },
+    "timeout": {
+      "ok": true,
+      "value": {
+        "exitCode": 137,
+        "reason": "timeout",
+        "stdout": "",
+        "stdoutLen": 0,
+        "stdoutTruncated": false,
+        "stderr": ""
+      },
+      "ms": 531
+    },
+    "abort-via-terminate": {
+      "ok": true,
+      "value": {
+        "exitCode": 143,
+        "reason": "terminated",
+        "stdout": "",
+        "stdoutLen": 0,
+        "stdoutTruncated": false,
+        "stderr": "Program recieved termination signal: Terminated\nProgram recieved fatal signal: Aborted\nProgram recieved fatal signal: Aborted\nProgram recieved fatal signal: Aborted\nProgram recieved fatal signal: Abor"
+      },
+      "ms": 324
+    },
+    "output-limit": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "reason": "exited",
+        "stdout": "x\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\nx\n",
+        "stdoutLen": 1000,
+        "stdoutTruncated": true,
+        "stderr": ""
+      },
+      "ms": 84
+    },
+    "network-disabled": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "reason": "exited",
+        "stdout": "blocked\n",
+        "stdoutLen": 8,
+        "stdoutTruncated": false,
+        "stderr": "bash: connect: Not supported\nbash: line 1: /dev/tcp/1.1.1.1/80: Not supported\n"
+      },
+      "ms": 23
+    },
+    "close": {
+      "ok": true,
+      "value": "closed",
+      "ms": 0
+    }
+  }
+}
