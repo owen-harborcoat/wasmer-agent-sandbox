@@ -33,6 +33,13 @@ export interface ExecLimits {
 
 export const DEFAULT_LIMITS: ExecLimits = { timeoutMs: 60_000, outputBytes: 1024 * 1024 };
 
+/**
+ * How long after `timeoutMs` the host-side backstop kills a guest that the
+ * SDK's own timeout missed. In @wasmer/sdk 0.18.0 the first command of a new
+ * client ignores `timeoutMs` while it sleeps (spikes/2026-09-25-sdk-0.18-timeout).
+ */
+const TIMEOUT_BACKSTOP_MS = 250;
+
 export interface WasmerSandboxOptions {
   /**
    * Share a client (package cache, workers) across sandboxes. A client passed
@@ -231,6 +238,7 @@ export class WasmerSandbox {
     });
 
     const detach = this.#terminateOnAbort(guest, signal);
+    const backstop = timeoutBackstop(guest, timeoutMs);
     try {
       // Feed stdin concurrently: a guest that never reads must not block wait().
       const feeding = options.stdin === undefined ? undefined : feed(guest, options.stdin);
@@ -239,13 +247,14 @@ export class WasmerSandbox {
       signal?.throwIfAborted();
       return {
         exitCode: output.exitCode,
-        reason: output.reason,
+        reason: backstop.reason(output.reason),
         stdout: output.stdout.text(),
         stderr: output.stderr.text(),
         truncated: { stdout: output.stdout.truncated, stderr: output.stderr.truncated },
         durationMs: Math.round(performance.now() - started),
       };
     } finally {
+      backstop.clear();
       detach();
     }
   }
@@ -263,7 +272,12 @@ export class WasmerSandbox {
       ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
     });
     const detach = this.#terminateOnAbort(guest, signal);
-    const exited = guest.wait().finally(detach);
+    const backstop =
+      options.timeoutMs === undefined ? undefined : timeoutBackstop(guest, options.timeoutMs);
+    const exited = guest.wait().finally(() => {
+      backstop?.clear();
+      detach();
+    });
     // Callers may never call wait(); keep an abandoned rejection from going unhandled.
     exited.catch(() => {});
 
@@ -274,7 +288,10 @@ export class WasmerSandbox {
       async wait() {
         const output = await exited;
         signal?.throwIfAborted();
-        return { exitCode: output.exitCode, reason: output.reason };
+        return {
+          exitCode: output.exitCode,
+          reason: backstop ? backstop.reason(output.reason) : output.reason,
+        };
       },
       async kill() {
         try {
@@ -353,6 +370,23 @@ export function resolveLimits(overrides: Partial<ExecLimits> = {}): ExecLimits {
   assertPositiveInteger('timeoutMs', limits.timeoutMs);
   assertPositiveInteger('outputBytes', limits.outputBytes);
   return limits;
+}
+
+/** Kills the guest if it outlives `timeoutMs` and the SDK has not already stopped it. */
+function timeoutBackstop(guest: Process, timeoutMs: number) {
+  let fired = false;
+  const timer = setTimeout(() => {
+    fired = true;
+    guest.kill().catch(() => {
+      // Already exited, or the sandbox closed underneath it.
+    });
+  }, timeoutMs + TIMEOUT_BACKSTOP_MS);
+  return {
+    clear: () => clearTimeout(timer),
+    /** Our kill surfaces as `terminated`; report it as the timeout it was. */
+    reason: (reason: ExitReason): ExitReason =>
+      fired && reason === 'terminated' ? 'timeout' : reason,
+  };
 }
 
 function isInWorkspace(path: string): boolean {

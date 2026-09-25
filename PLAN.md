@@ -34,11 +34,18 @@ at least two accepted upstream issues or PRs, one maintainer review.
 
 - `@wasmer/sdk` latest is **0.18.0** (published 2026-09-24). Releases are near-daily
   (0.15 → 0.18 in three days). The SDK is self-described alpha. The hackathon pinned 0.11.0.
-- AI SDK `Experimental_SandboxSession` = `description` + `run({command, workingDirectory?, env?, abortSignal?})`
-  → `{exitCode, stdout, stderr}`. `command` is a shell string. Experimental: can change in patch releases.
+- AI SDK `Experimental_SandboxSession` (`ai` 7.0.114 / `@ai-sdk/provider-utils` 5.0.47, checked
+  2026-09-25) is **larger than the docs page**: `description`, `run`, `spawn` (process with
+  `pid`, byte streams, `wait`, `kill`), `readFile`/`readBinaryFile`/`readTextFile` (line ranges,
+  encodings, `null` for missing) and `writeFile`/`writeBinaryFile`/`writeTextFile` (create
+  parents). `command` is a shell string. Experimental: can change in patch releases.
 - `HarnessV1SandboxProvider`: `specificationVersion: 'harness-sandbox-v1'`, `providerId`,
   `createSession({sessionId?, abortSignal?, identity?, onFirstCreate?})`, optional `resumeSession`.
-  Wasmer resembles `@ai-sdk/sandbox-just-bash` (no resume, no exposed network port).
+  Wasmer resembles `@ai-sdk/sandbox-just-bash` (no resume, no exposed network port). The
+  pattern: `createSession()` returns a `HarnessV1NetworkSandboxSession`, and its `restricted()` is
+  the plain session for AI SDK tools. The harness expects an absolute `$HOME`.
+- Other AI SDK sandbox providers on npm (2026-09-25): E2B, Coder, microsandbox, Apple Container,
+  local-machine, Vercel and just-bash. None for Wasmer.
 - LangChain no longer merges new sandbox providers into its monorepo; the path is a standalone
   package plus a docs-listing PR. `@langchain/sandbox-standard-tests` 2.0.1 exists.
 - No existing Wasmer provider for AI SDK or LangChain found on npm.
@@ -94,6 +101,27 @@ Evidence: `spikes/2026-09-24-sdk-0.18-process/`.
 - `wasmer/bash` resolves to `wasmer/bash@1.0.25`, with bash plus 101 coreutils-style commands.
   `python/python@3.13.20` bundles bash and coreutils too.
 
+## Filesystem, timeout and latency probes (SDK 0.18.0, Node 24.21.0, Windows 11)
+
+Evidence: `spikes/2026-09-25-sdk-0.18-fs/`, `spikes/2026-09-25-sdk-0.18-timeout/`.
+
+- **Only `/workspace` persists between commands.** A file written to `/tmp`, `/var`, `/opt`,
+  `/usr/local` or an unset `$HOME` is gone in the next command. `sandbox.fs` rejects any path
+  outside `/workspace` with `INVALID_PATH`. There are no mounts in the 0.18 JS API. Agents that
+  install tools or keep state outside the workspace will lose it: document this and flag it upstream.
+- `HOME` and `USER` are unset; `PATH` ends with `.`. `ls -la /` shows `----------` modes.
+- A missing file gives `FILESYSTEM_ERROR` with "entry not found" in the message, not a distinct
+  code. `sandbox.fs.writeFile` creates parent directories.
+- `wasmer/bash@1.0.25` coreutils is uutils 0.0.7 (multi-call binary): `realpath`, `base64` present;
+  `uname`, `which`, `git` absent. `base64` on a directory panics (exit 27) instead of erroring.
+- **Bug: the first command of a new `Wasmer` client ignores `timeoutMs` while it sleeps.** It is
+  deterministic and happens per client, not per process: `sleep 3` with `timeoutMs: 500` ran 3238 ms and 3361 ms as each
+  new client's first command, and ~700 ms afterwards. CPU-bound first commands are killed on time, and
+  `terminate()`/`kill()` still work. The core adds a host-side backstop (kill at `timeoutMs` + 250 ms)
+  and reports `timeout`. Minimal repro ready to file.
+- A new client's first two-process pipeline takes ~400 ms; later ones take 110–240 ms. Killed and
+  timed-out guests leave no host CPU behind.
+
 Candidate upstream issue: `terminate()` of `bash -c 'sleep 10'` writes repeated
 `Program recieved fatal signal: Aborted` lines (with the "recieved" misspelling) to stderr.
 Confirm it reproduces with a minimal case before filing it.
@@ -124,8 +152,19 @@ spikes/              dated throwaway experiments with raw results
   explicit files only, resolved package ids recorded. 18 real-Wasmer tests and 7 unit tests,
   stable across 3 consecutive runs on Node 24.21.0/Windows. Mutation checks confirmed: disabling
   abort, or defaulting network to host, fails the tests.
-- `packages/ai-sdk`: `createWasmerSandbox()` returning `Experimental_SandboxSession`.
-  Include an example `generateText` shell tool.
+- [x] `packages/core` file I/O + streaming (2026-09-25): `readFile` (`null` if missing),
+  `writeFile` (creates parents), `SandboxPathError` outside `/workspace`, streaming `spawn` with
+  abort and idempotent kill, `HOME=/workspace/.home`, host-side timeout backstop.
+- [x] `packages/ai-sdk` (2026-09-25): `createWasmerSandbox()` → `HarnessV1SandboxProvider`, with
+  sessions implementing the full `Experimental_SandboxSession`. It mirrors `@ai-sdk/sandbox-just-bash`:
+  ports throw `HarnessCapabilityUnsupportedError`, no `setNetworkPolicy`, no resume. Timeouts and
+  truncation are reported on stderr. It works with the harness's own `resolveSandboxHomeDir` and
+  `resolveSandboxDefaultWorkingDirectory`. End-to-end `generateText` test with `MockLanguageModelV4`:
+  a model-requested command runs in Wasmer, and its output is fed back. README with usage. Not yet run
+  against a live model.
+  Suite: 48 real-Wasmer tests + 7 unit tests, 11 consecutive clean full runs. Two flakes found
+  and fixed along the way (a 500 ms limit on a cold pipeline; stream chunks merging under load).
+  Mutation check: removing the backstop fails both first-command timeout tests.
 - Conformance v0: every spike probe as a test, plus stdin, UTF-8/binary output,
   large stderr, rapid sequential runs and close-while-running.
 - Provenance recorder (SDK version, package versions, Node, OS, cache state).
@@ -134,7 +173,10 @@ spikes/              dated throwaway experiments with raw results
 
 ### M2: Oct 2 – 15: LangChain provider + workload #1
 - `packages/deepagents`, run against `@langchain/sandbox-standard-tests`.
-- `HarnessV1SandboxProvider` wrapper for AI SDK harnesses that don't need network.
+- Run a real `HarnessAgent` harness that doesn't need ports on the Wasmer provider; decide where
+  harness state lives (`$HOME` is inside the working directory today).
+- Explore ports in `network: host` mode (guest listeners via `node:net`). Ports would allow
+  bridge-backed harnesses (Claude Code, Codex) to run on Wasmer.
 - Conformance: files (`sandbox.fs`), streaming processes, ports, cleanup/leaks,
   cold vs warm cache, N concurrent sandboxes.
 - Port the MCP Sentinel Helix fixture as workload #1 (MCP protocol + capability probes).

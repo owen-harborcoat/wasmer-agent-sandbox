@@ -1,0 +1,48 @@
+{
+  "sdk": "0.18.0",
+  "node": "24.21.0",
+  "platform": "win32",
+  "timeoutMs": 500,
+  "results": [
+    {
+      "client": "client A",
+      "run": 1,
+      "command": "sleep 3",
+      "reason": "exited",
+      "exitCode": 0,
+      "ms": 3238
+    },
+    {
+      "client": "client A",
+      "run": 2,
+      "command": "sleep 3",
+      "reason": "timeout",
+      "exitCode": 137,
+      "ms": 704
+    },
+    {
+      "client": "client B",
+      "run": 1,
+      "command": "sleep 3",
+      "reason": "exited",
+      "exitCode": 0,
+      "ms": 3361
+    },
+    {
+      "client": "client B",
+      "run": 2,
+      "command": "sleep 3",
+      "reason": "timeout",
+      "exitCode": 137,
+      "ms": 676
+    },
+    {
+      "client": "client C",
+      "run": 1,
+      "command": "while true; do :; done",
+      "reason": "timeout",
+      "exitCode": 137,
+      "ms": 929
+    }
+  ]
+}

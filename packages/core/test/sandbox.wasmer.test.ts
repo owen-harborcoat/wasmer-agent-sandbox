@@ -98,6 +98,38 @@ describe('WasmerSandbox', () => {
     expect(result.durationMs).toBeLessThan(10_000);
   });
 
+  // @wasmer/sdk 0.18.0: a new client's first command ignores timeoutMs while it
+  // sleeps (spikes/2026-09-25-sdk-0.18-timeout). The host-side backstop covers it.
+  it('enforces timeoutMs on the first command of a new client', async () => {
+    const fresh = new Wasmer();
+    try {
+      const first = await WasmerSandbox.create({ wasmer: fresh });
+      const started = performance.now();
+      const result = await first.exec('sleep 5', { timeoutMs: 500 });
+
+      expect(result.reason).toBe('timeout');
+      expect(performance.now() - started).toBeLessThan(2_500);
+      await first.close();
+    } finally {
+      await fresh.close();
+    }
+  });
+
+  it('enforces timeoutMs on spawned commands, including a new client’s first', async () => {
+    const fresh = new Wasmer();
+    try {
+      const first = await WasmerSandbox.create({ wasmer: fresh });
+      const spawned = await first.spawn('sleep 5', { timeoutMs: 500 });
+      const started = performance.now();
+
+      expect(await spawned.wait()).toMatchObject({ reason: 'timeout' });
+      expect(performance.now() - started).toBeLessThan(2_500);
+      await first.close();
+    } finally {
+      await fresh.close();
+    }
+  });
+
   it('truncates each stream independently at outputBytes and says so', async () => {
     const result = await sandbox.exec('yes o | head -c 5000; yes e | head -c 10 >&2', {
       outputBytes: 1000,
@@ -201,9 +233,15 @@ describe('WasmerSandbox', () => {
   });
 
   it('streams output from spawned commands while they run', async () => {
-    const spawned = await sandbox.spawn('for i in 1 2 3; do echo $i; sleep 0.2; done; echo e >&2');
+    // Gaps are wide so that a lagging reader cannot see two lines as one chunk.
+    const spawned = await sandbox.spawn('for i in 1 2 3; do echo $i; sleep 1; done; echo e >&2');
+    let exited = false;
+    void spawned.wait().then(() => {
+      exited = true;
+    });
     const reader = spawned.stdout.getReader();
     const first = await reader.read();
+    const firstArrivedWhileRunning = !exited;
     const [rest, stderr, exit] = await Promise.all([
       (async () => {
         let text = '';
@@ -218,6 +256,7 @@ describe('WasmerSandbox', () => {
     ]);
 
     expect(new TextDecoder().decode(first.value)).toBe('1\n');
+    expect(firstArrivedWhileRunning).toBe(true);
     expect(rest).toBe('2\n3\n');
     expect(stderr).toBe('e\n');
     expect(exit).toEqual({ exitCode: 0, reason: 'exited' });

@@ -1,0 +1,32 @@
+{
+  "name": "@owenota1337/wasmer-sandbox-ai-sdk",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Local Wasmer SDK sandboxes for the Vercel AI SDK: an Experimental_SandboxSession and a HarnessV1SandboxProvider.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "wasmer-agent-sandbox-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": "^22.23.0 || >=24.0.0"
+  },
+  "dependencies": {
+    "@ai-sdk/harness": "1.0.124",
+    "@ai-sdk/provider-utils": "5.0.47",
+    "@owenota1337/wasmer-sandbox-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@wasmer/sdk": "0.18.0",
+    "ai": "7.0.114",
+    "ws": "8.21.3",
+    "zod": "4.6.5"
+  }
+}

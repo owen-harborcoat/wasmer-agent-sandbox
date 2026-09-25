@@ -7,6 +7,7 @@
   "type": "module",
   "exports": {
     ".": {
+      "wasmer-agent-sandbox-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
