@@ -1,6 +1,7 @@
 # Working agreement
 
-Read PLAN.md first. It holds the goal, decisions, verified facts and milestones.
+Read HANDOFF.md first (current state and next steps), then PLAN.md (goal, decisions, verified
+facts and milestones). Repo: https://github.com/owen-harborcoat/wasmer-agent-sandbox (public).
 
 - Solo project. The hackathon repo `../wasmer-hackathon` is a frozen reference: read it, don't edit it.
 - Stack: TypeScript, pnpm workspaces, vitest, Biome, Node 24 (`.node-version`; Python guests
@@ -12,5 +13,6 @@ Read PLAN.md first. It holds the goal, decisions, verified facts and milestones.
 - Conformance results are evidence: report failures, skips and flakes as they are, and never
   record an error as a pass. Every report carries provenance (SDK, packages, Node, OS, cache state).
 - `pnpm check` runs lint, typecheck and unit tests. `pnpm test:wasmer` runs real sandboxes.
+- This repo is public: never commit secrets, local paths or career/hiring context.
 - Don't publish packages, push, or file upstream issues without the user's go-ahead. Never use
   the `@wasmer` npm scope or imply Wasmer endorsement.
