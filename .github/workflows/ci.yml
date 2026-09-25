@@ -1,0 +1,125 @@
+# Pinned matrix: lint, typecheck, unit tests, real Wasmer sandboxes and the SDK timeout repro
+# on Windows and Linux. The sdk-latest job runs nightly (and on demand) against the newest
+# @wasmer/sdk and reports its results instead of failing the build.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+        # Development version, and the declared floor (^22.23.0; Python guests fail on 22.14/22.15).
+        node: ['24.21.0', '22.23.0']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Registry packages (wasmer/bash, python/python) that the SDK downloads into ./.wasmer.
+      - name: Restore Wasmer package cache
+        id: wasmer-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .wasmer
+          key: wasmer-${{ runner.os }}-node${{ matrix.node }}-${{ hashFiles('pnpm-lock.yaml', 'packages/*/src/**', 'packages/*/test/**') }}
+          restore-keys: wasmer-${{ runner.os }}-node${{ matrix.node }}-
+      - run: mkdir -p "$RUNNER_TEMP/results"
+      - run: pnpm check
+      - name: Real Wasmer sandboxes
+        run: pnpm test:wasmer --reporter=default --reporter=json --outputFile.json="$RUNNER_TEMP/results/wasmer-tests.json"
+      - name: SDK timeout repro
+        if: success() || failure()
+        run: node spikes/2026-09-25-sdk-0.18-timeout/repro.mjs | tee "$RUNNER_TEMP/results/timeout-repro.json"
+      - name: Provenance
+        if: always()
+        env:
+          CACHE_HIT: ${{ steps.wasmer-cache.outputs.cache-hit }}
+        run: |
+          node .github/scripts/provenance.mjs > "$RUNNER_TEMP/results/provenance.json"
+          { echo '```json'; cat "$RUNNER_TEMP/results/provenance.json"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: results-${{ matrix.os }}-node${{ matrix.node }}
+          path: ${{ runner.temp }}/results
+          if-no-files-found: warn
+
+  sdk-latest:
+    name: ${{ matrix.os }} / @wasmer/sdk@latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.21.0'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Switch to the latest @wasmer/sdk
+        run: |
+          version="$(npm view @wasmer/sdk version)"
+          echo "Testing @wasmer/sdk@$version"
+          pnpm update --recursive "@wasmer/sdk@$version"
+      - run: mkdir -p "$RUNNER_TEMP/results"
+      # No .wasmer cache here: each nightly run is also a cold-cache data point.
+      # Failures are reported in the summary and artifacts; they don't fail the job.
+      - name: Typecheck
+        id: typecheck
+        continue-on-error: true
+        run: pnpm typecheck
+      - name: Real Wasmer sandboxes
+        id: wasmer
+        continue-on-error: true
+        run: pnpm test:wasmer --reporter=default --reporter=json --outputFile.json="$RUNNER_TEMP/results/wasmer-tests.json"
+      - name: SDK timeout repro
+        id: repro
+        continue-on-error: true
+        run: node spikes/2026-09-25-sdk-0.18-timeout/repro.mjs | tee "$RUNNER_TEMP/results/timeout-repro.json"
+      - name: Report
+        if: always()
+        env:
+          OUTCOMES: typecheck=${{ steps.typecheck.outcome }} wasmer=${{ steps.wasmer.outcome }} repro=${{ steps.repro.outcome }}
+        run: |
+          node .github/scripts/provenance.mjs > "$RUNNER_TEMP/results/provenance.json"
+          { echo '```json'; cat "$RUNNER_TEMP/results/provenance.json"; echo '```'; echo "Outcomes: $OUTCOMES"; } >> "$GITHUB_STEP_SUMMARY"
+          case "$OUTCOMES" in
+            *failure*) echo "::warning title=@wasmer/sdk@latest::$OUTCOMES" ;;
+          esac
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: sdk-latest-${{ matrix.os }}
+          path: ${{ runner.temp }}/results
+          if-no-files-found: warn
