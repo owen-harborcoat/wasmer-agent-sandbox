@@ -1,0 +1,89 @@
+{
+  "sdk": "0.18.0",
+  "node": "24.21.0",
+  "platform": "win32",
+  "results": {
+    "read-missing": {
+      "ok": false,
+      "error": "WasmerError[FILESYSTEM_ERROR]: filesystem operation `open` failed for `/workspace/missing.txt`: entry not found"
+    },
+    "read-dir-as-file": {
+      "ok": false,
+      "error": "WasmerError[FILESYSTEM_ERROR]: filesystem operation `open` failed for `/workspace/`: fd not a directory"
+    },
+    "read-relative": {
+      "ok": true,
+      "value": "seed"
+    },
+    "write-nested-no-parent": {
+      "ok": true
+    },
+    "mkdir-recursive-then-write": {
+      "ok": true,
+      "value": "nested"
+    },
+    "mkdir-recursive-existing": {
+      "ok": true
+    },
+    "write-outside-workspace": {
+      "ok": false,
+      "error": "WasmerError[INVALID_PATH]: invalid guest path `/tmp/probe`: sandbox filesystem paths must be inside `/workspace`"
+    },
+    "fs-sees-shell-writes": {
+      "ok": true,
+      "value": "from-shell\n"
+    },
+    "binary-roundtrip": {
+      "ok": true,
+      "value": {
+        "length": 256,
+        "equal": true,
+        "sha": ""
+      }
+    },
+    "stat-missing": {
+      "ok": false,
+      "error": "WasmerError[FILESYSTEM_ERROR]: filesystem operation `stat` failed for `/workspace/missing.txt`: entry not found"
+    },
+    "env-HOME-etc": {
+      "ok": true,
+      "value": {
+        "exitCode": 1,
+        "stdout": "HOME=[] USER=[] PATH=[/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:.] SHELL=[/bin/sh]\nid 0.0.7 (multi-call binary)\n\nUsage: id [function [arguments...]]\n\nCurrently defined functions:\n\n    arch, base32, base64, basename, cat, cksum, comm, cp, csplit, cut,\n    date, dircolors, dirname, echo, env, expand, factor, false, fmt, fold,\n    hashsum, head, join, link, ln, ls, md5sum, mkdir, mktemp, mv, nl, nproc,\n    numfmt, od, paste, printenv, printf, ptx, pwd, readlink, realpath,\n    relpath, rm, rmdir, seq, sha1sum, sha224sum, sha256sum, sha3-224sum,\n    sha3-256sum, sha3-384sum, sha3-512sum, sha384sum, sha3sum, sha512sum,\n    shake128sum, shake256sum, shred, shuf, sleep, sum, tee, touch, tr, true,\n    truncate, tsort, unexpand, uniq, unlink, wc, yes\n---------- 1 somebody somegroup 0 Sep 25 07:09 .\n---------- 1 somebody somegroup 0 Jan  1  1970 ..\n---------- 1 somebody somegroup 0 Sep 25 07:09 .app\n---------- 1 somebody somegroup 0 Sep 25 07:09 .private\n---------- 1 somebody somegroup 0 Sep 25 07:09 bin\n---------- 1 somebody somegroup 0 Sep 25 07:09 dev\n---------- 1 somebody somegroup 0 Sep 25 07:09 etc\n---------- 1 somebody somegroup 0 Sep 25 07:09 tmp\n---------- 1 somebody somegroup 0 Sep 25 07:09 usr\n---------- 1 somebody somegroup 0 Sep 25 07:09 workspace\nls: cannot access '/home': No such file or directory\n",
+        "stderr": ""
+      }
+    },
+    "realpath": {
+      "ok": true,
+      "value": {
+        "exitCode": 79,
+        "stdout": "/usr/bin/realpath\n/workspace/seed.txt\nbash: line 1: which: command not found\n",
+        "stderr": ""
+      }
+    },
+    "sh-exists": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "stdout": "arch base32 base64 baseenc basename bash cat chcon chgrp chmod chown chroot cksum comm cp csplit cut date dd df dircolors dirname du echo env expand expr factor false fmt fold groups hashsum head hostid hostname id install join kill link ln logname ls mkdir mkfifo mknod mktemp more mv ",
+        "stderr": ""
+      }
+    },
+    "sh-dash-c": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "stdout": "via sh\n",
+        "stderr": ""
+      }
+    },
+    "git-node-python": {
+      "ok": true,
+      "value": {
+        "exitCode": 0,
+        "stdout": "",
+        "stderr": ""
+      }
+    }
+  }
+}

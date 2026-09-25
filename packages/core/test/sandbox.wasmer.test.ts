@@ -1,7 +1,12 @@
 import { createServer } from 'node:net';
 import { Wasmer, WasmerError } from '@wasmer/sdk/node';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { DEFAULT_SHELL_PACKAGE, WasmerSandbox } from '../src/index.js';
+import {
+  DEFAULT_HOME,
+  DEFAULT_SHELL_PACKAGE,
+  SandboxPathError,
+  WasmerSandbox,
+} from '../src/index.js';
 
 const PYTHON = 'python/python@=3.13.20';
 
@@ -158,6 +163,83 @@ describe('WasmerSandbox', () => {
       WasmerError.is(error, 'SANDBOX_CLOSED'),
     );
     expect(own.closed).toBe(true);
+  });
+
+  it('keeps only /workspace between commands, and HOME inside it', async () => {
+    await sandbox.exec(
+      'echo keep > /workspace/kept.txt; echo lost > /tmp/lost.txt; echo home > ~/h',
+    );
+    const later = await sandbox.exec(
+      'cat /workspace/kept.txt ~/h; test -e /tmp/lost.txt || echo gone',
+    );
+
+    expect(later.stdout).toBe('keep\nhome\ngone\n');
+    expect(sandbox.home).toBe(DEFAULT_HOME);
+  });
+
+  it('reads and writes files, creating parents and resolving relative paths', async () => {
+    const bytes = Uint8Array.from({ length: 256 }, (_, i) => i);
+    await sandbox.writeFile('nested/dir/bytes.bin', bytes);
+
+    expect(await sandbox.readFile('/workspace/nested/dir/bytes.bin')).toEqual(bytes);
+    const listed = await sandbox.exec('wc -c < nested/dir/bytes.bin');
+    expect(listed.stdout.trim()).toBe('256');
+  });
+
+  it('sees files written by commands and returns null for missing files', async () => {
+    await sandbox.exec('printf from-shell > shell-made.txt');
+
+    expect(new TextDecoder().decode((await sandbox.readFile('shell-made.txt')) ?? undefined)).toBe(
+      'from-shell',
+    );
+    expect(await sandbox.readFile('does/not/exist.txt')).toBeNull();
+  });
+
+  it('rejects file access outside /workspace instead of pretending it persists', async () => {
+    await expect(sandbox.readFile('/tmp/x')).rejects.toBeInstanceOf(SandboxPathError);
+    await expect(sandbox.writeFile('../etc/x', 'x')).rejects.toBeInstanceOf(SandboxPathError);
+  });
+
+  it('streams output from spawned commands while they run', async () => {
+    const spawned = await sandbox.spawn('for i in 1 2 3; do echo $i; sleep 0.2; done; echo e >&2');
+    const reader = spawned.stdout.getReader();
+    const first = await reader.read();
+    const [rest, stderr, exit] = await Promise.all([
+      (async () => {
+        let text = '';
+        for (;;) {
+          const chunk = await reader.read();
+          if (chunk.done) return text;
+          text += new TextDecoder().decode(chunk.value);
+        }
+      })(),
+      new Response(spawned.stderr).text(),
+      spawned.wait(),
+    ]);
+
+    expect(new TextDecoder().decode(first.value)).toBe('1\n');
+    expect(rest).toBe('2\n3\n');
+    expect(stderr).toBe('e\n');
+    expect(exit).toEqual({ exitCode: 0, reason: 'exited' });
+    expect(spawned.pid).toBeTypeOf('number');
+  });
+
+  it('kills spawned commands idempotently', async () => {
+    const spawned = await sandbox.spawn('sleep 30');
+    await spawned.kill();
+    await spawned.kill();
+
+    expect(await spawned.wait()).toMatchObject({ reason: 'terminated' });
+    await spawned.kill();
+  });
+
+  it('rejects wait() with the abort reason when a spawned command is aborted', async () => {
+    const controller = new AbortController();
+    const spawned = await sandbox.spawn('sleep 30', { signal: controller.signal });
+    const reason = new Error('stop');
+    controller.abort(reason);
+
+    await expect(spawned.wait()).rejects.toBe(reason);
   });
 
   it('closes a client it created itself', async () => {
