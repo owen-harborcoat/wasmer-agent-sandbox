@@ -44,5 +44,5 @@ const results = [
 await wasmer.close();
 
 const { node, v8, uv, modules } = process.versions;
-const provenance = { sdk, node, v8, uv, modules, platform: process.platform, osRelease: release(), arch: arch(), cache };
+const provenance = { sdk, node, v8, uv, modules, execArgv: process.execArgv, platform: process.platform, osRelease: release(), arch: arch(), cache };
 console.log(JSON.stringify({ ...provenance, results }, null, 2));
