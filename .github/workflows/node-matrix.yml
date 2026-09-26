@@ -1,0 +1,49 @@
+# Manual probe: which Node releases can start a Python guest (spikes/2026-09-25-node22-python)?
+# Dependencies install on Node 24 (engine-strict rejects older Nodes), then the probe runs on the
+# Node under test. The probe records failures in its JSON and always exits 0.
+name: Node matrix
+
+on:
+  workflow_dispatch:
+    inputs:
+      versions:
+        description: JSON array of Node versions to probe
+        default: '["20.20.2","22.12.0","22.14.0","22.15.0","22.16.0","22.17.0","22.18.0","22.19.0","22.20.0","22.21.0","22.22.0","22.23.0","24.21.0"]'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  probe:
+    name: ${{ matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+        node: ${{ fromJSON(inputs.versions) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.21.0'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+      - run: mkdir -p "$RUNNER_TEMP/results"
+      - name: Python guest probe
+        run: node spikes/2026-09-25-node22-python/probe.mjs | tee "$RUNNER_TEMP/results/probe.json"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: node-${{ matrix.node }}-${{ matrix.os }}
+          path: ${{ runner.temp }}/results
+          if-no-files-found: warn
