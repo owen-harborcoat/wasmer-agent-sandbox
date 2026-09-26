@@ -55,15 +55,11 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
 
 1. **Check the first scheduled nightly** (05:23 UTC) ran and that its `sdk-latest` summary reads
    right. When a newer SDK ships, confirm the job goes yellow (warning), not red, on failures.
-2. **Draft upstream issues** for `wasmerio/wasmer-sdk` (draft only; filing needs the user's go-ahead):
-   - First command of a new client ignores `timeoutMs` while sleeping (repro ready; Windows + Linux).
-   - Python guest fails on Node 22.14/22.15 with `Validate("Unknown validation error")` while
-     `engines` says `>=20`. Bisect the Node 22 release first.
-   - Missing file → generic `FILESYSTEM_ERROR` ("entry not found"); ask for a distinct code.
-   - Docs: only `/workspace` persists between commands; other paths are per-process.
-   - Signal noise in guest stderr: SIGPIPE'd `yes | head` writes `Program recieved termination
-     signal: Broken pipe` + repeated `fatal signal: Aborted` into the command's stderr (30–60% of runs
-     on Windows runners, a few % on Linux; probe ready). `terminate()` shows the same lines.
+2. **Review and file the upstream drafts** in `upstream-drafts/` (uncommitted; filing needs the
+   user's go-ahead). Each has a standalone repro that was run as written on 2026-09-25:
+   `01` first-command timeout, `02` SIGPIPE stderr noise, `03` Python needs wasm exnref (Node
+   ≥22.19; root cause found), `04` missing-file error code, `05` docs on per-command overlays
+   (lower priority: the README already covers half of it).
 3. **SDK version comparison**: run the suite against 0.11.0 (the hackathon pin) and 0.18.0, and
    record the differences.
 4. **M2**: LangChain deepagentsjs provider tested with `@langchain/sandbox-standard-tests`; run a
@@ -74,6 +70,9 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
 
 - Where harness state should live: `$HOME` is currently inside the working directory, and the AI
   SDK harness docs ask for it to be outside. Only `/workspace` persists, so moving it out loses state.
+- Lower the Node floor to `^22.19.0 || >=24`? CI proves 22.19.0–22.23.0 run Python; the floor is
+  still `^22.23.0`.
+- Commit `upstream-drafts/` to the public repo, or keep the drafts local until they're filed?
 - The npm scope is `@owenota1337/*` but the GitHub owner is `owen-harborcoat`. Settle this before
   publishing (packages are `private: true` for now).
 - When to file the upstream issues, and whether to contact a Wasmer maintainer first about which

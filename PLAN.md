@@ -92,13 +92,18 @@ Evidence: `spikes/2026-09-24-sdk-0.18-process/`.
   `disabled` and omitted both give `OSError [Errno 58] Not supported` and the host sees no
   connection; `host` connects. So the SDK default is disabled. bash `/dev/tcp` cannot tell
   the modes apart.
-- **Python needs a recent Node 22.** `python/python@=3.13.20` fails to start on Node 22.14.0 and
-  22.15.0 with `EXECUTION_ERROR: compile error: Validate("Unknown validation error")`, and works
-  on 22.23.2 and 24.21.0. All three Node 22 builds report V8 12.4.254.21, so a Node 22 minor
-  (flag or patch) is the cutoff, not V8 itself. `@wasmer/sdk` declares `node >=20`, and bash
-  works on 22.14. Bisect the exact Node release before filing. Project floor: `^22.23.0 || >=24`,
-  developed on Node 24. The floor itself (22.23.0), Python tests included, passes in CI on Linux and
-  Windows.
+- **Python needs wasm `exnref`, which Node enables by default from 22.19.0.** `python/python@=3.13.20`
+  fails to start with `EXECUTION_ERROR: compile error: Validate("Unknown validation error")` on
+  Node 20.20.2 and on 22.12.0–22.18.0, and works on 22.19.0–22.23.0 and 24.21.0. The results are
+  the same on `ubuntu-24.04` and `windows-2025` (CI runs 36207380077, 36207655545; evidence
+  `spikes/2026-09-25-node22-python/results-ci.json`). Cause: Node 22.19.0 (nodejs/node#59020,
+  backport #59179) adds `--experimental-wasm-exnref` to its default V8 flags. On 22.12–22.18,
+  `node --experimental-wasm-exnref` fixes it, and so does `v8.setFlagsFromString` before the SDK
+  loads. `NODE_OPTIONS` rejects the flag. Node 20 (V8 11.3) doesn't know the flag at all. The
+  `memory64` and `imported-strings` flags don't help. `@wasmer/sdk` declares `node >=20`, and bash
+  works everywhere. Project floor: `^22.23.0 || >=24` (22.19.0 would be enough; the floor stays until
+  we decide), developed on Node 24. The floor (22.23.0), Python tests included, passes in CI on
+  Linux and Windows.
 - `wasmer/bash` resolves to `wasmer/bash@1.0.25`, with bash plus 101 coreutils-style commands.
   `python/python@3.13.20` bundles bash and coreutils too.
 
