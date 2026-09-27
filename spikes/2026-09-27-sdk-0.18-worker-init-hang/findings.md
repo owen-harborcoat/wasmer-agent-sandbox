@@ -215,3 +215,58 @@ to call it a real improvement, and it doesn't prevent the stall.
 
 Drafts: `upstream-drafts/06` (wasmer-sdk, the stall) and `07` (comment on nodejs/node#64500). Neither
 filed.
+
+## Why does an open client help? Two more arms, and Node 26
+
+Same shape as the controls (20 jobs × 10 processes × 30 iterations, ubuntu-24.04, `5a64a94`). Every process
+took the host-kill path on all 30 iterations.
+
+| Run | Arm | Processes run | V8 CHECK / SIGSEGV | Stall | Other |
+|---|---|---|---|---|---|
+| 36334735882 | `kill-close-module`, Node 22.23.0 | 157 | 0 / 0 | 6 | 0 |
+| 36334735882 | `kill-close-module`, Node 24.21.0 | 163 | 6 / 3 | 0 | 0 |
+| 36334737610 | `kill-close-idle`, Node 22.23.0 | 173 | 0 / 0 | 6 | 0 |
+| 36334737610 | `kill-close-idle`, Node 24.21.0 | 161 | 2 / 6 | 0 | 0 |
+| 36334739507 | `kill-close`, Node 26.10.0 | 185 | **0 / 0** | 1 | 3 (below) |
+
+- Keeping every compiled module alive (`kill-close-module`, 60–61 modules held per process) changes nothing.
+  Neither does an open client that never created a sandbox (`kill-close-idle`). The long-lived client in
+  `kill-close-shared` ran a command, so it has live workers with live instances. That's what makes the
+  difference, not the client object or the compiled bash module.
+- All three stalls I checked (Node 26 attempt 12, module arm Node 22 attempt 11, idle arm Node 22) are on
+  the same lock: a register holding `base + 0x17a2b4`. So the allocator stall happens on Node 22, 24 and 26.
+- Node 26.10.0 had no V8 crash in 185 processes. At Node 24's rate (~5% of processes) you'd expect about 9.
+
+### The V8 crash is a known, fixed V8 bug that 24.x doesn't have
+
+Node 24.21.0 ships V8 13.6.233.17. Its `WasmImportWrapperCache::MaybeGet` does
+`WasmCodeRefScope::AddRef(it->second)` and only then checks `is_dying()`. `Runtime_TierUpWasmToJSWrapper`
+opens a `WasmCodeRefScope` and calls `MaybeGet`. So a wrapper that code GC is freeing on another thread
+gets a ref in the scope, and when the scope unwinds (`~WasmCodeRefScope` → `DecrementRefCount` →
+`FreeDeadCode` → `WasmImportWrapperCache::Free`) it's freed a second time. Its JIT allocation is already
+unregistered, hence the CHECK. That's exactly our stack.
+
+V8 fixed it in `9b8ca54d5a` ("[wasm] Fix lookup of wrappers marked is_dying", 2025-04-11, crbug 409379692),
+which isn't in 13.6. Node's `v24.x` and `v24.x-staging` still have the old `MaybeGet` (checked 2026-09-27),
+and no backport PR or issue exists. `68210d500a` (the CHECKs it builds on) and then `9b8ca54d5a` apply
+cleanly onto `v24.x-staging`'s `deps/v8` (`git apply --check` on the four touched files; not built).
+Import wrappers became per-process in `a5999be590`, which 13.6 has and 22.x's V8 12.4 doesn't. That fits
+"Node 24 only".
+
+It also explains why only a client with live instances helps: while any instance still uses a wrapper,
+the wrapper never dies, so there's nothing to race with.
+
+### New on Node 26.10.0: a DataView RangeError in an SDK worker
+
+3 of 20 jobs failed in `Wasmer.close()` right after the kill, with `WORKER_FAILED`:
+
+```
+Wasmer SDK worker error: RangeError [Error]: Offset is outside the bounds of the DataView
+    at DataView.prototype.setInt32 (<anonymous>)
+    at __wbg___wbindgen_string_get_b0ca35b86a603356 (.../@wasmer/sdk/pkg/wasmer_sdk_js.js:1333:34)
+    at wasm://wasm/01254326:wasm-function[8023]:0x405b41
+```
+
+The glue's `getDataViewMemory0()` rebuilds its view whenever `wasm.memory.buffer` changes identity or
+length, so either the pointer from wasm is outside memory or this worker's `memory.buffer` hasn't caught
+up with a grow on another thread. None in the ~770 Node 22 and 24 processes of these runs and baseline 36300951450 (grepped the job logs). Not investigated yet.

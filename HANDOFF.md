@@ -85,18 +85,27 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
    fresh clients with a host `kill()` and **no long-lived client open**:
    - **SDK stall:** a kill (or close) `Worker::terminate()`s a thread that can be inside malloc/free.
      The global allocator's spin lock at wasm offset `0x17a2b4` stays held, and every thread spins.
-     Node 22 and 24, any V8 flags. Draft: `upstream-drafts/06`.
-   - **V8 crash:** Node 24 only. The wasm code GC frees import wrappers of a dead native module
-     (`jit_page_->allocations_` CHECK or SIGSEGV). `--no-wasm-code-gc` removes it, and PKU isn't
-     involved. Draft comment for nodejs/node#64500: `upstream-drafts/07`.
+     Node 22, 24 and 26, any V8 flags. Draft: `upstream-drafts/06`.
+   - **V8 crash:** Node 24 only, and it's a known V8 bug that 24.x lacks the fix for. 24.21.0's V8 13.6
+     frees a dying import wrapper twice (`WasmImportWrapperCache::MaybeGet` refs it before checking
+     `is_dying()`). Fixed upstream in V8 `9b8ca54d5a` (crbug 409379692), not in `v24.x` or
+     `v24.x-staging`. `68210d500a` then `9b8ca54d5a` apply cleanly there (not built). Node 26.10.0: 0
+     crashes in 185 processes. Draft for a **new** nodejs/node issue (a backport request):
+     `upstream-drafts/07-node-wasm-code-gc-check.md`. #64500 is the wrong target: its reporter traced
+     their SIGSEGV to faulty hardware and asked for the CHECK to get its own issue.
    - **Workaround in the suite:** `packages/core/test/keep-client-open.ts` (a vitest setup file) keeps
      one client open per test file, since the `kill-close-shared` arm had 0 failures in 6,000
      iterations. In the suite it only makes stalls rarer: stress 36333372198 still stalled 1 of 40
      jobs (same lock, main thread spinning alone). It's a workaround: remove it when the SDK is fixed,
      and don't count it as a fix.
-   - Next: the user reviews drafts 06 and 07 before anything is filed. Optional: work out *why* an
-     open client prevents both (a scheduler/pool shared across clients? the native module kept
-     alive?), which would sharpen 06.
+   - **Why an open client helps (runs 36334735882–36334739507):** it isn't the client object (an idle
+     one doesn't help) or the compiled module (holding every module alive doesn't help). It needs
+     live instances, which keep the shared import wrappers from dying. That explains the V8 crash. It
+     doesn't explain the SDK stall, which still happens on Node 22, 24 and 26 at the same `0x17a2b4`.
+   - **New, Node 26 only:** `RangeError: Offset is outside the bounds of the DataView` in
+     `__wbindgen_string_get` during `Wasmer.close()` (3 of 20 jobs). Not investigated. See findings.md.
+   - Next: the user reviews 06 and 07. Optional: build Node `v24.x-staging` with the two V8 commits on a
+     runner and rerun `kill-close` to prove the backport, before or alongside filing 07.
 2. **Remaining drafts** (`upstream-drafts/`, local only, excluded via `.git/info/exclude`): `04`
    missing-file error code, `05` docs on per-command overlays. Both rewritten in the short tone and
    re-checked on 0.18.0 (2026-09-26). Ready for the user to review before filing, along with 06 and 07.
