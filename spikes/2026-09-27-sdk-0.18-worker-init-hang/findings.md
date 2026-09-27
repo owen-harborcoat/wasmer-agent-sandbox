@@ -199,8 +199,19 @@ Every arm took the host-kill path on every iteration (`host kill/terminated` 30/
   on nodejs/node#64500.
 - **Allocator-lock stall:** Node 22 and 24, with every flag tried. It's the SDK's. On Node 24 the
   crash usually comes first, which is why stalls looked rare there.
-- A long-lived client prevents both (6,000 iterations). We don't know why yet. The suite now keeps
-  one open per test file (`packages/core/test/keep-client-open.ts`) as a workaround.
+- A long-lived client prevented both in the repro (6,000 iterations). We don't know why yet. The suite
+  now keeps one open per test file (`packages/core/test/keep-client-open.ts`) as a workaround.
+
+### The suite with the workaround: rarer, not gone
+
+Stress 36333372198 (full suite, 20 jobs each on Node 22.23.0 and 24.21.0, `b3c53e2`): 1 of 40
+stalled (Node 22.23.0, attempt 8), again right after `limits > ... times out`. The only busy thread was
+the main thread, in the same `xchg` loop on `rdi = 0x7f0ab017a2b4`, offset `0x17a2b4` again. No SDK
+worker thread was left in the process, so the lock holder had already been terminated. Round 1's
+attempt 5 (busy main thread, no workers) was probably the same thing.
+
+Before the workaround, full-suite runs stalled in 2 of 20 jobs. With it, 1 of 40. That's too few
+to call it a real improvement, and it doesn't prevent the stall.
 
 Drafts: `upstream-drafts/06` (wasmer-sdk, the stall) and `07` (comment on nodejs/node#64500). Neither
 filed.

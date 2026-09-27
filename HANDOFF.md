@@ -43,8 +43,8 @@ Verification (`@wasmer/sdk` 0.18.0): locally on Windows 11 / Node 24.21.0, 48 re
 confirm that the abort, network-default and timeout backstop tests fail when the behaviour is
 removed, and a poisoned `dist/index.js` confirms tests use the sources. **Known problem:** without a
 long-lived client, the SDK can hang the process after a kill, and Node 24 can crash in V8's wasm code
-GC. Both are diagnosed in `spikes/2026-09-27-sdk-0.18-worker-init-hang/findings.md` (next steps, item 1), and the suite
-works around them by keeping a client open. The watchdog kills and documents a stall within 10 minutes. **Not yet verified:** live models, other SDK versions, a nightly against a newer
+GC. Both are diagnosed in `spikes/2026-09-27-sdk-0.18-worker-init-hang/findings.md` (next steps, item 1), and keeping a
+client open in the suite makes them rarer but doesn't prevent them (1 stall in 40 stress jobs). The watchdog kills and documents a stall within 10 minutes. **Not yet verified:** live models, other SDK versions, a nightly against a newer
 SDK (the first scheduled nightly ran 2026-09-26 on 0.18.0 and hit the stall).
 
 ## Run it
@@ -91,8 +91,9 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
      involved. Draft comment for nodejs/node#64500: `upstream-drafts/07`.
    - **Workaround in the suite:** `packages/core/test/keep-client-open.ts` (a vitest setup file) keeps
      one client open per test file, since the `kill-close-shared` arm had 0 failures in 6,000
-     iterations. It's a workaround: remove it when the SDK is fixed. Check the suite stress run
-     dispatched with it (see the commit after `5363179`) and record the result in findings.
+     iterations. In the suite it only makes stalls rarer: stress 36333372198 still stalled 1 of 40
+     jobs (same lock, main thread spinning alone). It's a workaround: remove it when the SDK is fixed,
+     and don't count it as a fix.
    - Next: the user reviews drafts 06 and 07 before anything is filed. Optional: work out *why* an
      open client prevents both (a scheduler/pool shared across clients? the native module kept
      alive?), which would sharpen 06.
