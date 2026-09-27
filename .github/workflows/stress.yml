@@ -25,24 +25,28 @@ defaults:
 jobs:
   watchdog-selftest:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 8
     env:
-      NODE_OPTIONS: --report-on-signal --report-signal=SIGUSR2 --report-directory=${{ github.workspace }}/node-reports
+      NODE_OPTIONS: --report-on-signal --report-signal=SIGUSR2 --report-directory=${{ github.workspace }}/out/node-reports
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Idle event loop
+        env:
+          WATCHDOG_DIR: ${{ github.workspace }}/out/idle
         run: |
           ! .github/scripts/with-watchdog.sh 10 node -e 'setInterval(() => {}, 1000)'
       - name: Main thread blocked in Atomics.wait
+        env:
+          WATCHDOG_DIR: ${{ github.workspace }}/out/blocked
         run: |
           ! .github/scripts/with-watchdog.sh 10 node -e 'Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0)'
-      - name: Reports written
-        if: always()
+      - name: Evidence was collected
         run: |
-          ls -la node-reports || true
-          for f in node-reports/*.json; do
-            node -e 'const r = require(process.argv[1]); console.log(process.argv[1], r.header.trigger, (r.javascriptStack.stack || []).slice(0, 3))' "$PWD/$f"
-          done
+          find out -type f | sort
+          ls out/node-reports/*.json
+          node -e 'const r = require(process.argv[1]); console.log(r.header.trigger, r.javascriptStack.message)' "$PWD/$(ls out/node-reports/*.json | head -1)"
+          grep -l -i "futex\|Atomics" out/blocked/gdb-*.txt
+          grep -m3 -i "futex\|Atomics" out/blocked/gdb-*.txt
 
   suite:
     name: ${{ matrix.os }} / Node ${{ matrix.node }} / ${{ matrix.attempt }}
