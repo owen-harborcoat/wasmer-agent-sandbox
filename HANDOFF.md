@@ -1,6 +1,6 @@
 # Handoff
 
-State as of 2026-09-25, for the next working session. Read this, then [CLAUDE.md](CLAUDE.md)
+State as of 2026-09-26, for the next working session. Read this, then [CLAUDE.md](CLAUDE.md)
 (working rules), then [PLAN.md](PLAN.md) (decisions, verified facts, milestones).
 
 Repo: https://github.com/owen-harborcoat/wasmer-agent-sandbox (public, `main`). The local
@@ -25,13 +25,26 @@ Next: LangChain deepagentsjs. Target ~2026-11-07 (see PLAN.md for the four miles
 | `1730442` | redacted local paths in a saved stack trace |
 | `e541ecc` | CI: `ubuntu-24.04` + `windows-2025` × Node 24.21.0 + 22.23.0, nightly `sdk-latest` job that reports |
 | `0edb991` | timeout bug confirmed on Linux; SIGPIPE stderr-noise probe; truncation tests moved off `yes \| head` |
+| `b99c737` | Python-on-old-Node traced to wasm exnref (Node ≥22.19); manual `node-matrix.yml` probe |
+| `e3128cc` | Node floor lowered to `^22.19.0`; CI floor leg is 22.19.0; watchdog + 12 min limit on the wasmer step |
+| `2857cfc` | **tests now resolve workspace packages from source** (they silently used `dist/` before); gdb stacks on hangs |
+| `21cefe2`, `39c2ee1` | worker-init deadlock repro + `stress.yml` (suite or repro, many parallel runs) |
+
+Upstream (filed 2026-09-26 with the user's go-ahead): wasmerio/wasmer-sdk
+[#539](https://github.com/wasmerio/wasmer-sdk/issues/539) timeout fires late (plus a comment: a
+command on *another* client in between triggers it too, on Windows and Linux),
+[#540](https://github.com/wasmerio/wasmer-sdk/issues/540) SIGPIPE stderr noise,
+[#541](https://github.com/wasmerio/wasmer-sdk/issues/541) Python needs exnref / `engines`. Check them
+for replies first thing.
 
 Verification (`@wasmer/sdk` 0.18.0): locally on Windows 11 / Node 24.21.0, 48 real-Wasmer tests +
-7 unit tests, 11 consecutive clean full runs. CI run 36189376746 is green on all four legs
-(Linux + Windows × Node 24.21.0 + 22.23.0). Mutation checks confirm that the abort, network-default
-and timeout backstop tests fail when the behaviour is removed. **Not yet verified:** live models,
-other SDK versions, and a scheduled nightly run (the manual `sdk-latest` dispatch works; it ran 0.18.0
-because no newer SDK existed).
+7 unit tests. CI is green on all four legs (Linux + Windows × Node 24.21.0 + 22.19.0). Mutation checks
+confirm that the abort, network-default and timeout backstop tests fail when the behaviour is
+removed, and a poisoned `dist/index.js` confirms tests use the sources. **Known problem:** the suite
+stalls on Linux runners about 1 run in 10 (SDK worker-init deadlock and one unexplained busy loop;
+see `spikes/2026-09-27-sdk-0.18-worker-init-hang/findings.md`). The watchdog now kills and documents
+it within 10 minutes. **Not yet verified:** live models, other SDK versions, a nightly against a newer
+SDK (the first scheduled nightly ran 2026-09-26 on 0.18.0 and hit the stall).
 
 ## Run it
 
@@ -45,24 +58,32 @@ fnm exec --using=24 pnpm.cmd test:wasmer  # real sandboxes, ~15 s warm
 ```
 
 CI: `.github/workflows/ci.yml`. Every leg uploads `results-<os>-node<ver>` with the vitest JSON,
-the timeout repro, the SIGPIPE probe and `provenance.json`. Trigger the latest-SDK job by hand with
-`gh workflow run ci.yml --ref main`.
+the timeout repro, the SIGPIPE probe and `provenance.json`. On a Linux hang, it also uploads Node
+reports and gdb stacks. Scheduled runs start hours late (05:23 UTC cron, started ~09:56). Manual
+workflows:
+
+```bash
+gh workflow run ci.yml --ref main                                  # includes the sdk-latest job
+gh workflow run stress.yml --ref main                              # suite ×20 on ubuntu, Node 22.23 + 24
+gh workflow run stress.yml --ref main -f job=worker-init-repro     # the deadlock repro instead
+gh workflow run node-matrix.yml --ref main                         # Python guest across Node releases
+```
 
 In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use `pnpm.cmd`. Don't pipe
 `pnpm check` into `tail` when you need its exit code.
 
 ## Next steps, in order
 
-1. **Check the first scheduled nightly** (05:23 UTC) ran and that its `sdk-latest` summary reads
-   right. When a newer SDK ships, confirm the job goes yellow (warning), not red, on failures.
-2. **Review and file the upstream drafts** in `upstream-drafts/` (uncommitted; filing needs the
-   user's go-ahead). Each has a standalone repro that was run as written on 2026-09-25:
-   `01` first-command timeout, `02` SIGPIPE stderr noise, `03` Python needs wasm exnref (Node
-   ≥22.19; root cause found), `04` missing-file error code, `05` docs on per-command overlays
-   (lower priority: the README already covers half of it).
-3. **SDK version comparison**: run the suite against 0.11.0 (the hackathon pin) and 0.18.0, and
+1. **Upstream replies**: check #539–#541. #541 offers a PR (`engines` bump and a clear error): send
+   it if a maintainer picks an option. #540 offers a typo PR once they say where the message lives.
+2. **Suite stall**: narrow the trigger (bisect which test file or test starts it, using `stress.yml`
+   with a vitest filter), then file with the worker stacks. Until then it isn't filed: a CI log
+   alone isn't actionable for them.
+3. **Remaining drafts** (`upstream-drafts/`, local only, excluded via `.git/info/exclude`): `04`
+   missing-file error code, `05` docs on per-command overlays (lower priority).
+4. **SDK version comparison**: run the suite against 0.11.0 (the hackathon pin) and 0.18.0, and
    record the differences.
-4. **M2**: LangChain deepagentsjs provider tested with `@langchain/sandbox-standard-tests`; run a
+5. **M2**: LangChain deepagentsjs provider tested with `@langchain/sandbox-standard-tests`; run a
    real port-less `HarnessAgent` harness on the Wasmer provider; explore ports in `network: host`
    mode (it would allow bridge-backed harnesses); port the MCP Sentinel fixture as workload #1.
 
@@ -72,8 +93,8 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
   SDK harness docs ask for it to be outside. Only `/workspace` persists, so moving it out loses state.
 - The npm scope is `@owenota1337/*` but the GitHub owner is `owen-harborcoat`. Settle this before
   publishing (packages are `private: true` for now).
-- When to file the upstream issues, and whether to contact a Wasmer maintainer first about which
-  framework adapter they'd want.
+- Whether to contact a Wasmer maintainer about which framework adapter they'd want, now that three
+  issues are open.
 
 ## Gotchas learned the hard way
 
@@ -88,7 +109,12 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
   add noise lines. Generate output with `printf` instead. This machine never shows it; CI runners do.
 - The `.wasmer` cache key hashes the lockfile and package sources/tests, so most commits restore
   from a partial match (`wasmerCache: "partial"` in provenance).
-- `@wasmer/sdk` releases near-daily. Check `npm view @wasmer/sdk version` before assuming 0.18.0 is current.
+- Vite 8 runs tests in its server environment, which reads `ssr.resolve.conditions`, not
+  `resolve.conditions` (see `vitest.config.ts`). Before the fix, tests quietly imported `dist/`.
+- Node's report-on-signal can't fire while a JS main thread is blocked or spinning in a builtin. The
+  watchdog adds gdb native stacks for that case (Linux only).
+- `@wasmer/sdk` releases near-daily. The last one was 0.18.0 (2026-09-24), and nothing new had shipped by 2026-09-26.
+  Check `npm view @wasmer/sdk version` before assuming 0.18.0 is current.
 
 ## Rules that still apply
 

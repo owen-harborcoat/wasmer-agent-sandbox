@@ -147,6 +147,40 @@ CI artifacts `sigpipe-probe.json`).
   with the earlier sighting: `terminate()` of `bash -c 'sleep 10'` writes the same `fatal signal:
   Aborted` lines.
 
+## Timeout: second trigger, and where the deadline lives (2026-09-26)
+
+- A command that isn't the client's first also misses its deadline if a command on a *different*
+  `Wasmer` client ran just before it: `sleep 3` with `timeoutMs: 200` stops at ~3.1 s instead of
+  ~0.3 s. This is deterministic on Windows 11, and the same on the `ubuntu-24.04` and `windows-2025`
+  runners (all 1,200 iterations of the lifecycle repro). The deadline lands when the guest's
+  in-flight sleep returns (`sleep 1; sleep 1; sleep 1` stops at 1.2 s).
+- A host-side `kill()` at 750 ms stops the same guest on time, and `kill()` and the timeout share
+  `force_exit()`, so the SDK's deadline is what fires late. The deadline is
+  `Process::kill_on_timeout` → `ThreadPool::sleep_now` → a lazily started timer worker. In
+  `js/src/node-worker.ts`, messages that arrive before a worker has initialized are drained one at
+  a time, and each timer is awaited in full. Patching that alone didn't fix the stop time.
+  Reported upstream in wasmerio/wasmer-sdk#539 and its first comment.
+
+## Suite stalls on CI runners (2026-09-26)
+
+Evidence: `spikes/2026-09-27-sdk-0.18-worker-init-hang/findings.md`. About 1 in 10 suite runs on
+`ubuntu-24.04` stall: one scheduled run (Node 22.23.0) and 2 of 20 stress runs (Node 24.21.0).
+None have stalled on Windows or locally so far. One stall was a deadlock: all six SDK worker threads
+were parked in `Atomics.wait` inside wasm-bindgen's `__wbindgen_start` during initialization, and
+queued commands never ran. The other was a busy main thread rehashing a JS `Set`, with no SDK
+workers (cause unknown). A standalone loop of client create/run/close, with or without timeouts,
+kills, terminates and close-while-running, didn't stall in 7,200 iterations. Not filed until the
+trigger is narrower. The CI watchdog (`.github/scripts/with-watchdog.sh`) bounds and documents it.
+
+## Test harness fix (2026-09-26)
+
+Vite 8 runs vitest in its server environment, which reads `ssr.resolve.conditions`. The
+`wasmer-agent-sandbox-source` condition sat in `resolve.conditions` only, so the ai-sdk tests
+imported `packages/core/dist`, which `pnpm check` happened to rebuild first. Fixed in
+`vitest.config.ts` and verified with a poisoned `dist/index.js`. CI results since `e541ecc`
+stand, because every CI leg rebuilt `dist` from the same sources. A local `test:wasmer` run after
+editing sources without `pnpm check` could have tested stale code.
+
 ## Repository layout (target)
 
 ```
@@ -204,7 +238,10 @@ spikes/              dated throwaway experiments with raw results
 - Conformance: files (`sandbox.fs`), streaming processes, ports, cleanup/leaks,
   cold vs warm cache, N concurrent sandboxes.
 - Port the MCP Sentinel Helix fixture as workload #1 (MCP protocol + capability probes).
-- File the first evidence-backed Wasmer issues. Ask a maintainer which framework to publish first.
+- [x] File the first evidence-backed Wasmer issues (2026-09-26, done early): wasmerio/wasmer-sdk
+  #539 (timeout), #540 (SIGPIPE stderr noise), #541 (Python needs exnref / `engines`). Drafts for the
+  missing-file error code and the overlay docs are kept local.
+- Ask a maintainer which framework to publish first.
 
 ### M3: Oct 16 – 30: Edge dashboard + workloads
 - Results API + dashboard on Wasmer Edge, managed Postgres, scheduled runs.
