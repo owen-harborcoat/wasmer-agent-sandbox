@@ -16,12 +16,16 @@
 // between the kill and the close, to tell whether the kill or the close leaves the lock held.
 // Mode `kill-close-shared` is the same, plus one long-lived client that ran one command before the loop
 // and stays open throughout, to test whether an open client prevents the failures.
+// Two more arms ask why it does. `kill-close-idle` keeps a client open that never creates a sandbox or runs
+// anything. `kill-close-module` keeps no client open, but holds on to every wasm module the SDK compiles on
+// the main thread (each fresh client compiles bash there with `new WebAssembly.Module`), so V8 can reuse
+// the native module for identical bytes instead of freeing it.
 //
 // Exits 0 with a summary if every iteration finishes; on a stall it writes a Node diagnostic
 // report (worker JS stacks included) next to the results and exits 2.
 //
 // Run from the repo root:
-//   node spikes/2026-09-27-sdk-0.18-worker-init-hang/repro.mjs [iterations] [outDir] [basic|lifecycle|kill-close|kill-close-shared]
+//   node spikes/2026-09-27-sdk-0.18-worker-init-hang/repro.mjs [iterations] [outDir] [basic|lifecycle|kill-close|kill-close-shared|kill-close-idle|kill-close-module]
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { arch, cpus, release } from 'node:os';
@@ -31,11 +35,23 @@ import { pathToFileURL } from 'node:url';
 const require = createRequire(new URL('../../packages/core/package.json', import.meta.url));
 const entry = require.resolve('@wasmer/sdk/node');
 const sdk = JSON.parse(readFileSync(join(dirname(entry), '..', 'package.json'), 'utf8')).version;
-const { Wasmer } = await import(pathToFileURL(entry).href);
 
 const iterations = Number(process.argv[2] ?? 100);
 const outDir = resolve(process.argv[3] ?? '.');
 const mode = process.argv[4] ?? 'lifecycle';
+
+// The glue looks up WebAssembly.Module at call time, so this has to be in place before the SDK runs.
+const retained = [];
+if (mode === 'kill-close-module') {
+  WebAssembly.Module = new Proxy(WebAssembly.Module, {
+    construct(target, args) {
+      const module = new target(...args);
+      retained.push(module);
+      return module;
+    },
+  });
+}
+const { Wasmer } = await import(pathToFileURL(entry).href);
 const closeDelayMs = Number(process.env.KILL_CLOSE_DELAY_MS ?? 0);
 const STALL_MS = 30_000;
 const PACKAGE = 'wasmer/bash@=1.0.25';
@@ -97,13 +113,15 @@ async function killThenClose() {
   return { killed, reason: out.reason };
 }
 
-const killClose = mode === 'kill-close' || mode === 'kill-close-shared';
+const killClose = mode.startsWith('kill-close');
 let keptOpen;
 if (mode === 'kill-close-shared') {
   progress('long-lived client');
   keptOpen = new Wasmer();
   const keptSandbox = await keptOpen.sandboxes.create(SANDBOX);
   await keptSandbox.shell('echo kept').run();
+} else if (mode === 'kill-close-idle') {
+  keptOpen = new Wasmer();
 }
 
 const started = performance.now();
@@ -173,6 +191,7 @@ console.log(
     mode,
     execArgv: process.execArgv,
     ...(killClose ? { closeDelayMs, outcomes } : {}),
+    ...(mode === 'kill-close-module' ? { retainedModules: retained.length } : {}),
     totalMs: Math.round(performance.now() - started),
     iterationMs: { p50: pick(0.5), p95: pick(0.95), max: pick(1) },
   }),

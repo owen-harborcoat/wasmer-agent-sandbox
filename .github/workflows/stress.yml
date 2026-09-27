@@ -34,7 +34,7 @@ on:
       repro_mode:
         description: worker-init-repro mode
         type: choice
-        options: [lifecycle, basic, kill-close, kill-close-shared]
+        options: [lifecycle, basic, kill-close, kill-close-shared, kill-close-idle, kill-close-module]
         default: lifecycle
       vitest_args:
         description: Extra vitest args for the suite job, e.g. a file path or -t "name pattern"
