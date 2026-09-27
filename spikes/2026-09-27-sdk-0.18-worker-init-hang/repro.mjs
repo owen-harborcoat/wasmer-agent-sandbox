@@ -19,7 +19,7 @@
 //
 // Run from the repo root:
 //   node spikes/2026-09-27-sdk-0.18-worker-init-hang/repro.mjs [iterations] [outDir] [basic|lifecycle|kill-close]
-import { mkdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { arch, cpus, release } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -38,8 +38,10 @@ const PACKAGE = 'wasmer/bash@=1.0.25';
 
 let step = 'start';
 let iteration = 0;
+mkdirSync(outDir, { recursive: true });
+// Written synchronously on every step, so it survives a crash (seen: SIGSEGV in kill-close).
+const progressFile = join(outDir, 'progress.txt');
 const stall = () => {
-  mkdirSync(outDir, { recursive: true });
   const report = process.report.writeReport(join(outDir, 'stall-report.json'));
   console.log(JSON.stringify({ result: 'stall', iteration, step, stallMs: STALL_MS, report }));
   process.exit(2);
@@ -47,6 +49,7 @@ const stall = () => {
 let timer = setTimeout(stall, STALL_MS);
 const progress = (label) => {
   step = label;
+  writeFileSync(progressFile, `${iteration} ${label}\n`);
   clearTimeout(timer);
   timer = setTimeout(stall, STALL_MS);
 };

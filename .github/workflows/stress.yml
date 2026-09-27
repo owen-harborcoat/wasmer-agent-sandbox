@@ -137,6 +137,13 @@ jobs:
             wasmer-${{ runner.os }}-node${{ matrix.node }}-
             wasmer-${{ runner.os }}-
       - run: mkdir -p "$RUNNER_TEMP/results"
+      # kill-close has segfaulted node. Cores stay on the runner (they hold process memory); only
+      # the gdb summary is uploaded.
+      - name: Enable core dumps
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p "$RUNNER_TEMP/cores"
+          echo "$RUNNER_TEMP/cores/core.%p" | sudo tee /proc/sys/kernel/core_pattern
       # The watchdog also catches a busy main thread, which the repro's own stall timer can't.
       - name: Worker init repro
         timeout-minutes: 27
@@ -144,10 +151,26 @@ jobs:
           ITERATIONS: ${{ inputs.iterations }}
           MODE: ${{ inputs.repro_mode }}
           NODE_OPTIONS: ${{ runner.os == 'Linux' && format('--report-on-signal --report-signal=SIGUSR2 --report-directory={0}/results/node-reports', runner.temp) || '' }}
-        run: >-
-          .github/scripts/with-watchdog.sh 1500
-          node spikes/2026-09-27-sdk-0.18-worker-init-hang/repro.mjs "$ITERATIONS" "$RUNNER_TEMP/results" "$MODE"
-          | tee "$RUNNER_TEMP/results/repro.json"
+        run: |
+          ulimit -c unlimited
+          .github/scripts/with-watchdog.sh 1500 \
+            node spikes/2026-09-27-sdk-0.18-worker-init-hang/repro.mjs "$ITERATIONS" "$RUNNER_TEMP/results" "$MODE" \
+            | tee "$RUNNER_TEMP/results/repro.json"
+      - name: Summarise core dumps
+        if: failure() && runner.os == 'Linux'
+        run: |
+          shopt -s nullglob
+          cores=("$RUNNER_TEMP"/cores/core.*)
+          echo "${#cores[@]} core file(s)"
+          ((${#cores[@]})) || exit 0
+          command -v gdb > /dev/null || sudo apt-get install -y -qq gdb > /dev/null
+          for core in "${cores[@]}"; do
+            gdb -batch "$(command -v node)" "$core" \
+              -ex 'info threads' -ex 'bt 40' -ex 'info registers' -ex 'x/16i $pc' \
+              -ex 'thread apply all bt 25' \
+              > "$RUNNER_TEMP/results/gdb-$(basename "$core").txt" 2>&1
+            head -80 "$RUNNER_TEMP/results/gdb-$(basename "$core").txt"
+          done
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
