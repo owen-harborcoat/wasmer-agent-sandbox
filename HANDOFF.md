@@ -35,7 +35,7 @@ because no newer SDK existed).
 
 ## Run it
 
-Node 24 is required for Python guests (Python fails on Node 22 before ~22.23). On this machine the
+Python guests need Node 24 or ≥22.19 (wasm exnref; see PLAN.md). On this machine the
 system Node is 22.14, and Node 24.21.0 is installed through fnm. Prefix commands with it:
 
 ```bash
@@ -70,9 +70,6 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
 
 - Where harness state should live: `$HOME` is currently inside the working directory, and the AI
   SDK harness docs ask for it to be outside. Only `/workspace` persists, so moving it out loses state.
-- Lower the Node floor to `^22.19.0 || >=24`? CI proves 22.19.0–22.23.0 run Python; the floor is
-  still `^22.23.0`.
-- Commit `upstream-drafts/` to the public repo, or keep the drafts local until they're filed?
 - The npm scope is `@owenota1337/*` but the GitHub owner is `owen-harborcoat`. Settle this before
   publishing (packages are `private: true` for now).
 - When to file the upstream issues, and whether to contact a Wasmer maintainer first about which

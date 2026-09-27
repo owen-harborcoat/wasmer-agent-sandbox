@@ -23,7 +23,7 @@ at least two accepted upstream issues or PRs, one maintainer review.
 | First integration | Vercel AI SDK (`Experimental_SandboxSession`, then `HarnessV1SandboxProvider`) |
 | Second integration | LangChain deepagentsjs `SandboxProvider`, validated by `@langchain/sandbox-standard-tests` |
 | Later | OpenAI Agents SDK sandbox client (larger contract: resume, snapshots, serialized state) |
-| Stack | TypeScript, pnpm workspaces, vitest, Node 24 (floor `^22.23.0`; SDK claims `>=20`) |
+| Stack | TypeScript, pnpm workspaces, vitest, Node 24 (floor `^22.19.0`; SDK claims `>=20`) |
 | npm scope | `@owenota1337/*` placeholder; never `@wasmer/*` or implied endorsement |
 | Dependencies | Exact pins; lockfile committed; nightly job also runs `@wasmer/sdk@latest` |
 | MCP Sentinel | Workload #1; model assessment stays out of pass/fail |
@@ -101,9 +101,8 @@ Evidence: `spikes/2026-09-24-sdk-0.18-process/`.
   `node --experimental-wasm-exnref` fixes it, and so does `v8.setFlagsFromString` before the SDK
   loads. `NODE_OPTIONS` rejects the flag. Node 20 (V8 11.3) doesn't know the flag at all. The
   `memory64` and `imported-strings` flags don't help. `@wasmer/sdk` declares `node >=20`, and bash
-  works everywhere. Project floor: `^22.23.0 || >=24` (22.19.0 would be enough; the floor stays until
-  we decide), developed on Node 24. The floor (22.23.0), Python tests included, passes in CI on
-  Linux and Windows.
+  works everywhere. Project floor: `^22.19.0 || >=24` (lowered from 22.23.0 on 2026-09-26),
+  developed on Node 24. CI tests the floor itself (22.19.0) on Linux and Windows.
 - `wasmer/bash` resolves to `wasmer/bash@1.0.25`, with bash plus 101 coreutils-style commands.
   `python/python@3.13.20` bundles bash and coreutils too.
 
@@ -191,7 +190,7 @@ spikes/              dated throwaway experiments with raw results
   large stderr, rapid sequential runs and close-while-running.
 - Provenance recorder (SDK version, package versions, Node, OS, cache state).
 - [x] CI on GitHub Actions (2026-09-25): `.github/workflows/ci.yml`, `ubuntu-24.04` + `windows-2025`
-  × Node 24.21.0 + 22.23.0 (the declared floor), pinned SDK, actions pinned by SHA, `./.wasmer`
+  × Node 24.21.0 + the declared floor (22.23.0, now 22.19.0), pinned SDK, actions pinned by SHA, `./.wasmer`
   cached, results + provenance uploaded as artifacts. `sdk-latest` job (nightly + manual) reports
   instead of failing. First green run: 36189376746 (48/48 real-Wasmer tests on all four legs).
 - Version comparison: run conformance v0 against SDK 0.11.0 and 0.18.0.

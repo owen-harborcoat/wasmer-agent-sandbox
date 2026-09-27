@@ -1,0 +1,86 @@
+# Manual: run the real-Wasmer suite many times in parallel to reproduce rare hangs or flakes.
+# First self-tests the watchdog against an idle and a blocked (Atomics.wait) Node process.
+name: Stress
+
+on:
+  workflow_dispatch:
+    inputs:
+      os:
+        description: JSON array of runner images
+        default: '["ubuntu-24.04"]'
+      node:
+        description: JSON array of Node versions
+        default: '["22.23.0","24.21.0"]'
+      attempts:
+        description: JSON array of attempt labels (one job per os x node x attempt)
+        default: '[1,2,3,4,5,6,7,8,9,10]'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  watchdog-selftest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      NODE_OPTIONS: --report-on-signal --report-signal=SIGUSR2 --report-directory=${{ github.workspace }}/node-reports
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Idle event loop
+        run: |
+          ! .github/scripts/with-watchdog.sh 10 node -e 'setInterval(() => {}, 1000)'
+      - name: Main thread blocked in Atomics.wait
+        run: |
+          ! .github/scripts/with-watchdog.sh 10 node -e 'Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0)'
+      - name: Reports written
+        if: always()
+        run: |
+          ls -la node-reports || true
+          for f in node-reports/*.json; do
+            node -e 'const r = require(process.argv[1]); console.log(process.argv[1], r.header.trigger, (r.javascriptStack.stack || []).slice(0, 3))' "$PWD/$f"
+          done
+
+  suite:
+    name: ${{ matrix.os }} / Node ${{ matrix.node }} / ${{ matrix.attempt }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(inputs.os) }}
+        node: ${{ fromJSON(inputs.node) }}
+        attempt: ${{ fromJSON(inputs.attempts) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Restore (never save) the CI package cache: the scheduled hang happened with a warm cache.
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .wasmer
+          key: wasmer-${{ runner.os }}-node${{ matrix.node }}-stress
+          restore-keys: |
+            wasmer-${{ runner.os }}-node${{ matrix.node }}-
+            wasmer-${{ runner.os }}-
+      - run: mkdir -p "$RUNNER_TEMP/results"
+      - name: Real Wasmer sandboxes
+        timeout-minutes: 10
+        env:
+          NODE_OPTIONS: ${{ runner.os == 'Linux' && format('--report-on-signal --report-signal=SIGUSR2 --report-directory={0}/results/node-reports', runner.temp) || '' }}
+        run: >-
+          .github/scripts/with-watchdog.sh 300
+          pnpm test:wasmer --reporter=verbose --reporter=json --outputFile.json="$RUNNER_TEMP/results/wasmer-tests.json"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: stress-${{ matrix.os }}-node${{ matrix.node }}-${{ matrix.attempt }}
+          path: ${{ runner.temp }}/results
+          if-no-files-found: warn

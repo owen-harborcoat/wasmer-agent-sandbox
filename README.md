@@ -9,7 +9,7 @@ Status: M1 in progress. See [PLAN.md](PLAN.md).
 
 ## Development
 
-Requires Node 24 (or 22.23+) and pnpm 10.
+Requires Node 24 (or 22.19+) and pnpm 10.
 
 ```bash
 pnpm install
