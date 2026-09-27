@@ -22,6 +22,9 @@ on:
       iterations:
         description: Iterations per worker-init-repro job
         default: '300'
+      vitest_args:
+        description: Extra vitest args for the suite job, e.g. a file path or -t "name pattern"
+        default: ''
 
 permissions:
   contents: read
@@ -89,9 +92,12 @@ jobs:
         timeout-minutes: 10
         env:
           NODE_OPTIONS: ${{ runner.os == 'Linux' && format('--report-on-signal --report-signal=SIGUSR2 --report-directory={0}/results/node-reports', runner.temp) || '' }}
+          VITEST_ARGS: ${{ inputs.vitest_args }}
+        # eval keeps shell quoting in the input (-t "a name"). Only repo writers can dispatch this.
         run: >-
+          eval "set -- $VITEST_ARGS" &&
           .github/scripts/with-watchdog.sh 300
-          pnpm test:wasmer --reporter=verbose --reporter=json --outputFile.json="$RUNNER_TEMP/results/wasmer-tests.json"
+          pnpm test:wasmer --reporter=verbose --reporter=json --outputFile.json="$RUNNER_TEMP/results/wasmer-tests.json" "$@"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
