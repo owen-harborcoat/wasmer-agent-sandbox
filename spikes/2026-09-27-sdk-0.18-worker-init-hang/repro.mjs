@@ -3,10 +3,15 @@
 // runs on ubuntu-24.04 (stress run 36293213824). The suite creates and closes a fresh `Wasmer`
 // client per session while a shared client stays open, so this does the same in a loop.
 //
+// Mode `basic` only creates, runs and closes. Mode `lifecycle` (default) also does what the suite does
+// around the stalls: a timed-out command, a killed spawn, a terminated spawn, and closing a sandbox
+// while a command is still running.
+//
 // Exits 0 with a summary if every iteration finishes; on a stall it writes a Node diagnostic
 // report (worker JS stacks included) next to the results and exits 2.
 //
-// Run from the repo root: node spikes/2026-09-27-sdk-0.18-worker-init-hang/repro.mjs [iterations] [outDir]
+// Run from the repo root:
+//   node spikes/2026-09-27-sdk-0.18-worker-init-hang/repro.mjs [iterations] [outDir] [basic|lifecycle]
 import { mkdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { arch, cpus, release } from 'node:os';
@@ -20,6 +25,7 @@ const { Wasmer } = await import(pathToFileURL(entry).href);
 
 const iterations = Number(process.argv[2] ?? 100);
 const outDir = resolve(process.argv[3] ?? '.');
+const mode = process.argv[4] ?? 'lifecycle';
 const STALL_MS = 30_000;
 const PACKAGE = 'wasmer/bash@=1.0.25';
 
@@ -53,6 +59,21 @@ for (iteration = 1; iteration <= iterations; iteration++) {
   if (output.stdout.text() !== 'fresh\nx') throw new Error(`unexpected output: ${output.stdout.text()}`);
   progress('run on shared client');
   await sharedSandbox.shell('echo shared').run();
+  if (mode === 'lifecycle') {
+    progress('timed-out command');
+    await sandbox.shell('sleep 5').run({ check: false, timeoutMs: 200 });
+    progress('killed spawn');
+    const killed = await sandbox.shell('sleep 5').spawn();
+    await killed.kill();
+    await killed.wait();
+    progress('terminated spawn');
+    const terminated = await sandbox.shell('sleep 5').spawn();
+    await terminated.terminate();
+    await terminated.wait();
+    progress('spawn left running at close');
+    const running = await sandbox.shell('sleep 5').spawn();
+    void running.wait().catch(() => {});
+  }
   progress('close sandbox');
   await sandbox.close();
   progress('close client');
@@ -75,6 +96,7 @@ console.log(
     arch: arch(),
     cpus: cpus().length,
     iterations,
+    mode,
     totalMs: Math.round(performance.now() - started),
     iterationMs: { p50: pick(0.5), p95: pick(0.95), max: pick(1) },
   }),
