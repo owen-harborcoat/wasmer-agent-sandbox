@@ -65,6 +65,7 @@ workflows:
 ```bash
 gh workflow run ci.yml --ref main                                  # includes the sdk-latest job
 gh workflow run stress.yml --ref main                              # suite ×20 on ubuntu, Node 22.23 + 24
+gh workflow run stress.yml --ref main -f vitest_args='<file> -t "<name>"'   # narrowed suite
 gh workflow run stress.yml --ref main -f job=worker-init-repro     # the deadlock repro instead
 gh workflow run node-matrix.yml --ref main                         # Python guest across Node releases
 ```
@@ -74,16 +75,41 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
 
 ## Next steps, in order
 
-1. **Upstream replies**: check #539–#541. #541 offers a PR (`engines` bump and a clear error): send
-   it if a maintainer picks an option. #540 offers a typo PR once they say where the message lives.
-2. **Suite stall**: narrow the trigger (bisect which test file or test starts it, using `stress.yml`
-   with a vitest filter), then file with the worker stacks. Until then it isn't filed: a CI log
-   alone isn't actionable for them.
-3. **Remaining drafts** (`upstream-drafts/`, local only, excluded via `.git/info/exclude`): `04`
-   missing-file error code, `05` docs on per-command overlays (lower priority).
-4. **SDK version comparison**: run the suite against 0.11.0 (the hackathon pin) and 0.18.0, and
-   record the differences.
-5. **M2**: LangChain deepagentsjs provider tested with `@langchain/sandbox-standard-tests`; run a
+0. **Check #539–#541 for replies** before anything else. If a maintainer picks an option on #541,
+   send that PR first (small, and turnaround matters). Match the repo's tone: short first-person
+   prose, a repro and raw output, no templated sections (see the saved memory on public tone).
+1. **Narrow the suite stall (current task).** Goal: a small, reliable trigger, then an upstream
+   issue in the same tone as #539–#541. Evidence so far is in
+   `spikes/2026-09-27-sdk-0.18-worker-init-hang/findings.md`: about 1 in 10 full-suite runs on
+   ubuntu stall. One stall was all SDK workers parked in `Atomics.wait` inside `__wbindgen_start`;
+   the other was a busy main thread with no workers. Both stress stalls were in
+   `packages/ai-sdk/test/session.wasmer.test.ts`. A standalone client-cycling loop (7,200 iterations)
+   never stalled.
+   - Round 1 was dispatched 2026-09-26 (ubuntu-24.04, Node 24.21.0), one file per run. Read these
+     first:
+     - 36294840179: `session.wasmer.test.ts` ×20
+     - 36294844376: `sandbox.wasmer.test.ts` (core) ×10
+     - 36294848396: `generate-text.wasmer.test.ts` ×10
+
+     A stalled job fails after about 5 minutes. Its artifact `stress-…` holds `watchdog/ps.txt`,
+     `watchdog/gdb-<pid>.txt` (native stacks) and `node-reports/*.json` (JS stacks of every worker;
+     don't commit these, they contain the runner env). The verbose log shows the last finished test.
+   - If only the session file stalls, bisect it by `describe` / test name:
+     `gh workflow run stress.yml --ref main -f node='["24.21.0"]' -f attempts='[1,…,20]' -f vitest_args='packages/ai-sdk/test/session.wasmer.test.ts -t "run"'`.
+     If no single file stalls, the trigger is cross-file (clients left over from an earlier file):
+     try core + session together.
+   - Summarise the per-job workers' JS stacks with a node one-liner over `report.workers[]`
+     (`javascriptStack.stack`), and the gdb dumps with awk over `^Thread` / `^#` lines. The last
+     session did both.
+   - Once a short trigger stalls in ≥3 of 20 jobs, turn it into a standalone repro (SDK only, no
+     vitest), run it in `stress.yml` with `-f job=worker-init-repro`-style wiring, then draft the
+     issue in `upstream-drafts/` and ask the user before filing.
+2. **Remaining drafts** (`upstream-drafts/`, local only, excluded via `.git/info/exclude`): `04`
+   missing-file error code, `05` docs on per-command overlays. Rewrite both in the short tone first.
+3. **Finish M1** (due Oct 1): conformance v0 (the remaining spike probes as tests, plus stdin,
+   UTF-8/binary, large stderr, close-while-running), a provenance recorder in the package, and the
+   SDK 0.11.0 vs 0.18.0 comparison.
+4. **M2**: LangChain deepagentsjs provider tested with `@langchain/sandbox-standard-tests`; run a
    real port-less `HarnessAgent` harness on the Wasmer provider; explore ports in `network: host`
    mode (it would allow bridge-backed harnesses); port the MCP Sentinel fixture as workload #1.
 
