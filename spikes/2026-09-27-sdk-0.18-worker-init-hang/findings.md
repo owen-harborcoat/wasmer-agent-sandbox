@@ -118,5 +118,53 @@ whether the close is what leaves the lock held.
 The stress job now runs the repro under the watchdog, because a busy main thread can't fire the
 repro's own stall timer, and the gdb dump includes the instructions at each thread's pc.
 
-So far only the suite triggers it. Not filed upstream yet: it needs a repro, or at least a
-narrower trigger.
+## A/B: kill-to-close gap (the repro reproduces both problems)
+
+Stress 36300951450 (gap 0 ms) and 36300955555 (gap 1000 ms): kill-close, 20 jobs × up to 10 fresh
+processes × 30 iterations, ubuntu-24.04, Node 24.21.0. A job stops at its first failing process.
+
+| Gap | Failed jobs | SIGTRAP (V8 CHECK) | SIGSEGV | Stall |
+|---|---|---|---|---|
+| 0 ms | 8 / 20 | 5 | 2 | 1 |
+| 1000 ms | 9 / 20 | 6 | 3 | 0 |
+
+That's about 150 processes per arm, so roughly 5% of fresh processes fail. The gap changes nothing,
+so a race between the kill and the close is not the cause. What stands out is *where*: 15 of the 16
+crashes happened at iteration 11, step `first command times out`, and the other at iteration 10. So
+it happens at a fixed amount of client churn (about the 21st client and its workers in the process),
+not at a random moment. `basic` and `lifecycle`, which never crashed, keep a long-lived client open
+all the time. kill-close doesn't, and neither do the suite's `limits` tests.
+
+### The crash is in V8
+
+SIGTRAP is a failed V8 CHECK:
+
+```
+# Fatal error in , line 0
+# Check failed: jit_page_->allocations_.erase(addr) == 1.
+  3: v8::internal::ThreadIsolation::JitPageReference::UnregisterAllocation(unsigned long)
+  4: v8::internal::ThreadIsolation::UnregisterWasmAllocation(unsigned long, unsigned long)
+```
+
+The core (gdb, 36300951450 attempt 20) continues `WasmCodeAllocator::FreeCode` ←
+`WasmImportWrapperCache::Free` ← `WasmEngine::FreeDeadCode` ← `WasmCodeRefScope::~WasmCodeRefScope`
+← `Runtime_TierUpWasmToJSWrapper`, on an SDK worker thread. The SIGSEGVs take the same path and crash
+in `NativeModule::FreeCode` → `RecursiveMutex::Lock` (36300951450 attempt 16): V8 frees dead import
+wrapper code for a native module that looks already freed.
+
+This matches nodejs/node#64500 (open). PGlite users see the same CHECK on Linux CI in ~4–5% of runs
+with Node 24.16–24.19, and `--no-wasm-tier-up` didn't help them. Prisma worked around it by awaiting
+`worker.terminate()` on close, and with `--no-memory-protection-keys` (V8's PKU JIT write protection
+is Linux-only, which would explain why Windows never crashes). The SDK's `node-worker-adapter.js`
+does `void this.#worker.terminate()`, so `Wasmer.close()` doesn't wait for its threads to exit.
+
+### The stall is one fixed lock in the SDK's wasm memory
+
+36300951450 attempt 18 stalled in process 1, iteration 29, step `close (truncation)`. It looks like the suite's
+stalls: the main thread and one worker (`worker-145`) are both spinning on `xchg`, and both have
+`rdi = 0x7f59d417a2b4`. That's offset `0x17a2b4` from the memory base, the **same offset** as the suite
+stall in 36294840179 (`0x7fcdac17a2b4`). So it's one static lock in the SDK's wasm linear memory, the
+same one in the suite and in the SDK-only repro. Which static sits at `0x17a2b4` isn't known yet.
+
+Not filed upstream yet. Next: find what's at `0x17a2b4`, rerun with a long-lived client, on Node
+22.23, and with `--no-memory-protection-keys`, then write a short issue.
