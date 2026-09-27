@@ -7,11 +7,18 @@
 // around the stalls: a timed-out command, a killed spawn, a terminated spawn, and closing a sandbox
 // while a command is still running.
 //
+// Mode `kill-close` copies the `WasmerSandboxSession limits` tests, where stress run 36294840179 stalled
+// (main thread and the only SDK worker both busy): the *first* command on a fresh client times out, the
+// SDK's timeout fires late (wasmerio/wasmer-sdk#539), so a host-side kill() stops it at 750 ms, and the
+// client is closed right after. Then another fresh client runs a command with an output limit. There's
+// no long-lived client in this mode. A busy main thread can't fire the stall timer below: run it under
+// .github/scripts/with-watchdog.sh to get native stacks.
+//
 // Exits 0 with a summary if every iteration finishes; on a stall it writes a Node diagnostic
 // report (worker JS stacks included) next to the results and exits 2.
 //
 // Run from the repo root:
-//   node spikes/2026-09-27-sdk-0.18-worker-init-hang/repro.mjs [iterations] [outDir] [basic|lifecycle]
+//   node spikes/2026-09-27-sdk-0.18-worker-init-hang/repro.mjs [iterations] [outDir] [basic|lifecycle|kill-close]
 import { mkdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { arch, cpus, release } from 'node:os';
@@ -44,16 +51,65 @@ const progress = (label) => {
   timer = setTimeout(stall, STALL_MS);
 };
 
-const shared = new Wasmer();
-const sharedSandbox = await shared.sandboxes.create({ packages: [PACKAGE], shell: 'bash' });
+const SANDBOX = { packages: [PACKAGE], shell: 'bash' };
+
+// One iteration of `kill-close`, mirroring core's exec(): SDK timeout plus a host backstop kill.
+async function killThenClose() {
+  progress('new client (timeout)');
+  const wasmer = new Wasmer();
+  const sandbox = await wasmer.sandboxes.create(SANDBOX);
+  progress('first command times out');
+  const guest = await sandbox
+    .shell('echo partial >&2; sleep 30')
+    .spawn({ stdin: 'closed', stdout: 'capture', stderr: 'capture', timeoutMs: 500 });
+  let killed = false;
+  const backstop = setTimeout(() => {
+    killed = true;
+    guest.kill().catch(() => {});
+  }, 750);
+  const out = await guest.wait();
+  clearTimeout(backstop);
+  if (out.stderr.text() !== 'partial\n') throw new Error(`unexpected stderr: ${out.stderr.text()}`);
+  progress('close right after the kill');
+  await sandbox.close();
+  await wasmer.close();
+
+  progress('new client (truncation)');
+  const next = new Wasmer();
+  const nextSandbox = await next.sandboxes.create(SANDBOX);
+  progress('run with output limit');
+  const truncated = await nextSandbox
+    .shell("printf 'y\\n%.0s' {1..500}")
+    .spawn({ stdin: 'closed', stdout: 'capture', stderr: 'capture', outputBytes: 100 });
+  const result = await truncated.wait();
+  if (result.stdout.text() !== 'y\n'.repeat(50)) throw new Error('unexpected truncated stdout');
+  progress('close (truncation)');
+  await nextSandbox.close();
+  await next.close();
+  return { killed, reason: out.reason };
+}
+
 const started = performance.now();
 const durations = [];
-for (iteration = 1; iteration <= iterations; iteration++) {
+const outcomes = {};
+if (mode === 'kill-close') {
+  for (iteration = 1; iteration <= iterations; iteration++) {
+    const t = performance.now();
+    const { killed, reason } = await killThenClose();
+    const key = `${killed ? 'host kill' : 'sdk timeout'}/${reason}`;
+    outcomes[key] = (outcomes[key] ?? 0) + 1;
+    durations.push(performance.now() - t);
+  }
+}
+
+const shared = mode === 'kill-close' ? undefined : new Wasmer();
+const sharedSandbox = await shared?.sandboxes.create(SANDBOX);
+for (iteration = 1; mode !== 'kill-close' && iteration <= iterations; iteration++) {
   const t = performance.now();
   progress('new client');
   const wasmer = new Wasmer();
   progress('create sandbox');
-  const sandbox = await wasmer.sandboxes.create({ packages: [PACKAGE], shell: 'bash' });
+  const sandbox = await wasmer.sandboxes.create(SANDBOX);
   progress('run on fresh client');
   const output = await sandbox.shell('echo fresh; printf x > /workspace/f; cat /workspace/f').run();
   if (output.stdout.text() !== 'fresh\nx') throw new Error(`unexpected output: ${output.stdout.text()}`);
@@ -81,8 +137,8 @@ for (iteration = 1; iteration <= iterations; iteration++) {
   durations.push(performance.now() - t);
 }
 clearTimeout(timer);
-await sharedSandbox.close();
-await shared.close();
+await sharedSandbox?.close();
+await shared?.close();
 
 durations.sort((a, b) => a - b);
 const pick = (q) => Math.round(durations[Math.floor(q * (durations.length - 1))]);
@@ -97,6 +153,7 @@ console.log(
     cpus: cpus().length,
     iterations,
     mode,
+    ...(mode === 'kill-close' ? { outcomes } : {}),
     totalMs: Math.round(performance.now() - started),
     iterationMs: { p50: pick(0.5), p95: pick(0.95), max: pick(1) },
   }),
