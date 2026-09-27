@@ -14,12 +14,14 @@
 // no long-lived client in this mode. A busy main thread can't fire the stall timer below: run it under
 // .github/scripts/with-watchdog.sh to get native stacks. KILL_CLOSE_DELAY_MS (default 0) waits that long
 // between the kill and the close, to tell whether the kill or the close leaves the lock held.
+// Mode `kill-close-shared` is the same, plus one long-lived client that ran one command before the loop
+// and stays open throughout, to test whether an open client prevents the failures.
 //
 // Exits 0 with a summary if every iteration finishes; on a stall it writes a Node diagnostic
 // report (worker JS stacks included) next to the results and exits 2.
 //
 // Run from the repo root:
-//   node spikes/2026-09-27-sdk-0.18-worker-init-hang/repro.mjs [iterations] [outDir] [basic|lifecycle|kill-close]
+//   node spikes/2026-09-27-sdk-0.18-worker-init-hang/repro.mjs [iterations] [outDir] [basic|lifecycle|kill-close|kill-close-shared]
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { arch, cpus, release } from 'node:os';
@@ -95,10 +97,19 @@ async function killThenClose() {
   return { killed, reason: out.reason };
 }
 
+const killClose = mode === 'kill-close' || mode === 'kill-close-shared';
+let keptOpen;
+if (mode === 'kill-close-shared') {
+  progress('long-lived client');
+  keptOpen = new Wasmer();
+  const keptSandbox = await keptOpen.sandboxes.create(SANDBOX);
+  await keptSandbox.shell('echo kept').run();
+}
+
 const started = performance.now();
 const durations = [];
 const outcomes = {};
-if (mode === 'kill-close') {
+if (killClose) {
   for (iteration = 1; iteration <= iterations; iteration++) {
     const t = performance.now();
     const { killed, reason } = await killThenClose();
@@ -108,9 +119,10 @@ if (mode === 'kill-close') {
   }
 }
 
-const shared = mode === 'kill-close' ? undefined : new Wasmer();
+await keptOpen?.close();
+const shared = killClose ? undefined : new Wasmer();
 const sharedSandbox = await shared?.sandboxes.create(SANDBOX);
-for (iteration = 1; mode !== 'kill-close' && iteration <= iterations; iteration++) {
+for (iteration = 1; !killClose && iteration <= iterations; iteration++) {
   const t = performance.now();
   progress('new client');
   const wasmer = new Wasmer();
@@ -159,7 +171,8 @@ console.log(
     cpus: cpus().length,
     iterations,
     mode,
-    ...(mode === 'kill-close' ? { closeDelayMs, outcomes } : {}),
+    execArgv: process.execArgv,
+    ...(killClose ? { closeDelayMs, outcomes } : {}),
     totalMs: Math.round(performance.now() - started),
     iterationMs: { p50: pick(0.5), p95: pick(0.95), max: pick(1) },
   }),

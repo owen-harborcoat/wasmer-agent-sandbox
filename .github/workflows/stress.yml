@@ -28,10 +28,13 @@ on:
       close_delay_ms:
         description: kill-close only, ms to wait between the kill and the close
         default: '0'
+      node_flags:
+        description: Extra node/V8 flags for the repro command line (V8 flags aren't allowed in NODE_OPTIONS)
+        default: ''
       repro_mode:
         description: worker-init-repro mode
         type: choice
-        options: [lifecycle, basic, kill-close]
+        options: [lifecycle, basic, kill-close, kill-close-shared]
         default: lifecycle
       vitest_args:
         description: Extra vitest args for the suite job, e.g. a file path or -t "name pattern"
@@ -160,12 +163,14 @@ jobs:
           PROCESSES: ${{ inputs.processes }}
           MODE: ${{ inputs.repro_mode }}
           KILL_CLOSE_DELAY_MS: ${{ inputs.close_delay_ms }}
+          NODE_FLAGS: ${{ inputs.node_flags }}
           NODE_OPTIONS: ${{ runner.os == 'Linux' && format('--report-on-signal --report-signal=SIGUSR2 --report-directory={0}/results/node-reports', runner.temp) || '' }}
         run: |
           ulimit -c unlimited
+          # NODE_FLAGS is split on purpose: it holds several flags.
           for p in $(seq "$PROCESSES"); do
             WATCHDOG_DIR="$RUNNER_TEMP/results/p$p/watchdog" .github/scripts/with-watchdog.sh $((ITERATIONS * 5 + 60)) \
-              node spikes/2026-09-27-sdk-0.18-worker-init-hang/repro.mjs "$ITERATIONS" "$RUNNER_TEMP/results/p$p" "$MODE" \
+              node $NODE_FLAGS spikes/2026-09-27-sdk-0.18-worker-init-hang/repro.mjs "$ITERATIONS" "$RUNNER_TEMP/results/p$p" "$MODE" \
               | tee -a "$RUNNER_TEMP/results/repro.jsonl"
           done
       - name: Summarise core dumps
