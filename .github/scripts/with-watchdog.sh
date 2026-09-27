@@ -6,7 +6,7 @@
 # - a process listing and native thread stacks (gdb) for every process in the group, written to
 #   $WATCHDOG_DIR (default $RUNNER_TEMP/results/watchdog). Native stacks matter when a JS main
 #   thread is blocked (e.g. in Atomics.wait), where Node can't produce a report. The instructions
-#   at each thread's pc show a spin loop in JIT or wasm code, which has no symbols;
+#   at each thread's pc and its registers show a spin loop in JIT or wasm code, which has no symbols;
 # - SIGUSR2 to the group, so Node processes started with --report-on-signal write a diagnostic
 #   report (JS stacks included) to the --report-directory from NODE_OPTIONS, created here.
 # Signals and process groups are Linux-only; elsewhere the command just runs.
@@ -35,7 +35,7 @@ collect() {
   fi
   for p in $(pgrep -g "$pid"); do
     timeout 60 sudo -n gdb -p "$p" -batch -ex 'info threads' -ex 'thread apply all bt 20' \
-      -ex 'thread apply all x/16i $pc' \
+      -ex 'thread apply all x/16i $pc' -ex 'thread apply all info registers' \
       > "$dump_dir/gdb-$p.txt" 2>&1
   done
 }

@@ -12,6 +12,7 @@ here because Node reports include the runner's environment.
 | Stress 36293213824, attempt 3 | ubuntu-24.04 / Node 24.21.0 | deadlock (below) |
 | Stress 36293213824, attempt 5 | ubuntu-24.04 / Node 24.21.0 | busy main thread (below) |
 | Stress 36294840179, attempt 15 | ubuntu-24.04 / Node 24.21.0 | busy main thread and SDK worker, session file alone (below) |
+| Stress 36297367277, attempt 17 | ubuntu-24.04 / Node 24.21.0 | same, with only the two `limits` tests selected (below) |
 
 That's 2 of 20 full-suite stress jobs, and 18 passed in 30–45 s. The other legs, and all Windows runs
 so far, have not stalled.
@@ -24,7 +25,8 @@ Round 1 ran one test file per job (ubuntu-24.04, Node 24.21.0):
 | 36294844376 | `core/test/sandbox.wasmer.test.ts` | 0 of 10 |
 | 36294848396 | `ai-sdk/test/generate-text.wasmer.test.ts` | 0 of 10 |
 
-So the session file stalls without any help from other files.
+So the session file stalls without any help from other files. Round 2 (36297367277) selected only
+the two `limits` tests (`-t "limits"`, everything else skipped): 1 of 20 stalled, in the same place.
 
 ## Attempt 3: SDK workers deadlocked during initialization
 
@@ -60,7 +62,33 @@ So the session file stalls without any help from other files.
   and a word at offset `0x17a2b4` in it. All the other threads were idle. Node couldn't write a
   report for the fork.
 
-Hypothesis, not confirmed: two threads spinning on one shared-memory word points at a spin lock
+Attempt 17 of 36297367277 (limits tests only) stalled the same way: the timeout test passed
+(1954 ms), then the truncation test hung, and the fork was `R` with the main thread and one worker
+(`worker-6`) busy. This time the watchdog dumped the instructions at each pc. Both threads are in
+the same shape of loop, a wasm atomic exchange retried until it returns 0:
+
+```
+worker-6:                                   MainThread:
+=> test   %r8d,%r8d                         => mov    %rdi,-0x18(%rbp)
+   je     <acquired>                           mov    $0x1,%r8d
+   mov    %rdi,%r8                             ...
+   xchg   %r8d,(%rcx)                          xchg   %r9d,(%rdi)
+   test   %r8d,%r8d                            test   %r9d,%r9d
+   je     <acquired>                           je     <acquired>
+   cmp    -0x60(%r13),%rsp   (stack guard)     ...
+   jbe    ...                                  cmp    -0x60(%r13),%rsp
+   xchg   %edi,(%rcx)                          jbe    ...
+   test   %edi,%edi                            xchg   %r8d,(%rdi)
+   jne    <loop>                               test   %r8d,%r8d
+```
+
+That's a spin lock in shared wasm memory, and no live thread holds it.
+
+`Wasmer.close()` ends in the client's wasm `shutdown()`, which terminates its workers through
+`node-worker-adapter.js` (`worker.terminate()`). Node's `terminate()` stops a thread at its next
+interrupt check, including in the middle of wasm code holding a lock in shared memory.
+
+Hypothesis, now much stronger: two threads spinning on one shared-memory word points at a spin lock
 whose holder is gone. A worker that `close()` terminated while it was still tearing down the
 killed process could leave it held. Rust's wasm allocator, for example, spins instead of blocking
 when built with atomics. The attempt 3 deadlock (workers parked in `Atomics.wait` inside
@@ -79,6 +107,14 @@ when built with atomics. The attempt 3 deadlock (workers parked in `Atomics.wait
 In `lifecycle` the timed-out command isn't the client's first, so the SDK's own timeout stops it and
 nothing is killed from the host right before `close()`. Mode `kill-close` copies the limits tests
 instead: locally (Windows) every iteration took the host-kill path (`host kill/terminated`, 10 of 10).
+On CI it did something worse than stall. Stress 36297366137 (20 jobs × 300 iterations,
+ubuntu-24.04, Node 24.21.0): 2 jobs **segfaulted** (`Segmentation fault (core dumped)`, exit 139)
+14 s and 25 s in, and the other 18 ran all 300 iterations (p50 1.0 s per iteration). `basic` and
+`lifecycle` never crashed in 7,200 iterations. Locally (Windows), 300 of 300 passed. Both crashes
+happened early in the process, so the job can now run many short processes, capture core dumps
+(only the gdb summary is uploaded), and wait `close_delay_ms` between the kill and the close to test
+whether the close is what leaves the lock held.
+
 The stress job now runs the repro under the watchdog, because a busy main thread can't fire the
 repro's own stall timer, and the gdb dump includes the instructions at each thread's pc.
 

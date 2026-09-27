@@ -20,8 +20,14 @@ on:
         options: [suite, worker-init-repro]
         default: suite
       iterations:
-        description: Iterations per worker-init-repro job
+        description: Iterations per worker-init-repro process
         default: '300'
+      processes:
+        description: Fresh worker-init-repro processes per job, run one after another
+        default: '1'
+      close_delay_ms:
+        description: kill-close only, ms to wait between the kill and the close
+        default: '0'
       repro_mode:
         description: worker-init-repro mode
         type: choice
@@ -145,17 +151,23 @@ jobs:
           mkdir -p "$RUNNER_TEMP/cores"
           echo "$RUNNER_TEMP/cores/core.%p" | sudo tee /proc/sys/kernel/core_pattern
       # The watchdog also catches a busy main thread, which the repro's own stall timer can't.
+      # kill-close crashes came early in a process, so many short processes beat one long one.
+      # Stops at the first failing process and keeps its evidence.
       - name: Worker init repro
         timeout-minutes: 27
         env:
           ITERATIONS: ${{ inputs.iterations }}
+          PROCESSES: ${{ inputs.processes }}
           MODE: ${{ inputs.repro_mode }}
+          KILL_CLOSE_DELAY_MS: ${{ inputs.close_delay_ms }}
           NODE_OPTIONS: ${{ runner.os == 'Linux' && format('--report-on-signal --report-signal=SIGUSR2 --report-directory={0}/results/node-reports', runner.temp) || '' }}
         run: |
           ulimit -c unlimited
-          .github/scripts/with-watchdog.sh 1500 \
-            node spikes/2026-09-27-sdk-0.18-worker-init-hang/repro.mjs "$ITERATIONS" "$RUNNER_TEMP/results" "$MODE" \
-            | tee "$RUNNER_TEMP/results/repro.json"
+          for p in $(seq "$PROCESSES"); do
+            WATCHDOG_DIR="$RUNNER_TEMP/results/p$p/watchdog" .github/scripts/with-watchdog.sh $((ITERATIONS * 5 + 60)) \
+              node spikes/2026-09-27-sdk-0.18-worker-init-hang/repro.mjs "$ITERATIONS" "$RUNNER_TEMP/results/p$p" "$MODE" \
+              | tee -a "$RUNNER_TEMP/results/repro.jsonl"
+          done
       - name: Summarise core dumps
         if: failure() && runner.os == 'Linux'
         run: |

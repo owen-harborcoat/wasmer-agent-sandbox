@@ -12,7 +12,8 @@
 // SDK's timeout fires late (wasmerio/wasmer-sdk#539), so a host-side kill() stops it at 750 ms, and the
 // client is closed right after. Then another fresh client runs a command with an output limit. There's
 // no long-lived client in this mode. A busy main thread can't fire the stall timer below: run it under
-// .github/scripts/with-watchdog.sh to get native stacks.
+// .github/scripts/with-watchdog.sh to get native stacks. KILL_CLOSE_DELAY_MS (default 0) waits that long
+// between the kill and the close, to tell whether the kill or the close leaves the lock held.
 //
 // Exits 0 with a summary if every iteration finishes; on a stall it writes a Node diagnostic
 // report (worker JS stacks included) next to the results and exits 2.
@@ -33,6 +34,7 @@ const { Wasmer } = await import(pathToFileURL(entry).href);
 const iterations = Number(process.argv[2] ?? 100);
 const outDir = resolve(process.argv[3] ?? '.');
 const mode = process.argv[4] ?? 'lifecycle';
+const closeDelayMs = Number(process.env.KILL_CLOSE_DELAY_MS ?? 0);
 const STALL_MS = 30_000;
 const PACKAGE = 'wasmer/bash@=1.0.25';
 
@@ -73,6 +75,7 @@ async function killThenClose() {
   const out = await guest.wait();
   clearTimeout(backstop);
   if (out.stderr.text() !== 'partial\n') throw new Error(`unexpected stderr: ${out.stderr.text()}`);
+  if (closeDelayMs > 0) await new Promise((done) => setTimeout(done, closeDelayMs));
   progress('close right after the kill');
   await sandbox.close();
   await wasmer.close();
@@ -156,7 +159,7 @@ console.log(
     cpus: cpus().length,
     iterations,
     mode,
-    ...(mode === 'kill-close' ? { outcomes } : {}),
+    ...(mode === 'kill-close' ? { closeDelayMs, outcomes } : {}),
     totalMs: Math.round(performance.now() - started),
     iterationMs: { p50: pick(0.5), p95: pick(0.95), max: pick(1) },
   }),
