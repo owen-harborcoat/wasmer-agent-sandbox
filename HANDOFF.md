@@ -29,7 +29,7 @@ Next: LangChain deepagentsjs. Target ~2026-11-07 (see PLAN.md for the four miles
 | `e3128cc` | Node floor lowered to `^22.19.0`; CI floor leg is 22.19.0; watchdog + 12 min limit on the wasmer step |
 | `2857cfc` | **tests now resolve workspace packages from source** (they silently used `dist/` before); gdb stacks on hangs |
 | `21cefe2`, `39c2ee1` | worker-init deadlock repro + `stress.yml` (suite or repro, many parallel runs) |
-| `5129a92`, `25bcce2`, `1886aff` | repro mode `kill-close` (SDK only) reproduces **both** the stall and a V8 crash; watchdog on the repro, pc/register dumps, core-dump summaries, `processes` / `close_delay_ms` inputs |
+| `5129a92` … `5363179` | repro mode `kill-close` (SDK only) reproduces **both** the stall and a V8 crash; watchdog on the repro, pc/register dumps, core-dump summaries, `processes` / `close_delay_ms` inputs |
 
 Upstream (filed 2026-09-26 with the user's go-ahead): wasmerio/wasmer-sdk
 [#539](https://github.com/wasmerio/wasmer-sdk/issues/539) timeout fires late (plus a comment: a
@@ -41,10 +41,10 @@ for replies first thing.
 Verification (`@wasmer/sdk` 0.18.0): locally on Windows 11 / Node 24.21.0, 48 real-Wasmer tests +
 7 unit tests. CI is green on all four legs (Linux + Windows × Node 24.21.0 + 22.19.0). Mutation checks
 confirm that the abort, network-default and timeout backstop tests fail when the behaviour is
-removed, and a poisoned `dist/index.js` confirms tests use the sources. **Known problem:** the suite
-stalls on Linux runners about 1 run in 10, and the SDK-only repro also crashes node (V8). Both are
-diagnosed in `spikes/2026-09-27-sdk-0.18-worker-init-hang/findings.md` (next steps, item 1). The
-watchdog kills and documents a stall within 10 minutes. **Not yet verified:** live models, other SDK versions, a nightly against a newer
+removed, and a poisoned `dist/index.js` confirms tests use the sources. **Known problem:** without a
+long-lived client, the SDK can hang the process after a kill, and Node 24 can crash in V8's wasm code
+GC. Both are diagnosed in `spikes/2026-09-27-sdk-0.18-worker-init-hang/findings.md` (next steps, item 1), and the suite
+works around them by keeping a client open. The watchdog kills and documents a stall within 10 minutes. **Not yet verified:** live models, other SDK versions, a nightly against a newer
 SDK (the first scheduled nightly ran 2026-09-26 on 0.18.0 and hit the stall).
 
 ## Run it
@@ -80,42 +80,25 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
 0. **Check #539–#541 for replies** before anything else. If a maintainer picks an option on #541,
    send that PR first (small, and turnaround matters). Match the repo's tone: short first-person
    prose, a repro and raw output, no templated sections (see the saved memory on public tone).
-1. **Suite stall and V8 crash (current task).** Details and run ids in
-   `spikes/2026-09-27-sdk-0.18-worker-init-hang/findings.md`. Where it stands:
-   - Trigger: fresh `Wasmer` clients with **no long-lived client open**, where the first command
-     times out and is killed from the host (`limits` tests in `session.wasmer.test.ts`, and
-     `repro.mjs` mode `kill-close`). Modes with a long-lived client never failed (7,200 iterations).
-   - **Stall:** the main thread and one SDK worker spin forever on a wasm atomic `xchg` at linear-memory
-     offset `0x17a2b4`, the same offset in the suite and in the repro: a static spin lock whose
-     holder is gone. Rate: ~1 in 20 suite jobs, 1 in ~150 repro processes.
-   - **Crash:** ~5% of fresh repro processes on ubuntu die at iteration 10–11: V8
-     `Check failed: jit_page_->allocations_.erase(addr) == 1` (SIGTRAP) or a SIGSEGV in
-     `NativeModule::FreeCode`, both from `Runtime_TierUpWasmToJSWrapper` → `FreeDeadCode`. Matches
-     nodejs/node#64500. Waiting 1000 ms between the kill and the close made no difference.
-   - **Local commits not pushed:** the findings and HANDOFF updates from this session. Push them
-     when the user OKs it.
-   - Next, in order:
-     1. Find what's at `0x17a2b4` in the SDK's wasm (`pkg/*.wasm`): the data section plus any name
-        section, or the SDK's Rust source / `wasm-objdump -x`. If it's the Rust allocator lock or a
-        wasm-bindgen static, the stall issue gets much sharper.
-     2. Confirm the co-factor: kill-close with a long-lived client open the whole time. Needs a
-        small repro change (for example `KEEP_CLIENT=1`).
-     3. Crash controls, 20 jobs × 10 processes × 30 iterations each: Node 22.23.0,
-        `node --no-memory-protection-keys` (a V8 flag, **not** allowed in `NODE_OPTIONS`: add it to the
-        repro command line), and `--no-wasm-code-gc` if V8 13.x still has it. Those settle whether this
-        is PKU/code-GC in V8 or something the SDK can avoid (e.g. awaiting `worker.terminate()`: the
-        adapter does `void this.#worker.terminate()`).
-     4. Then drafts in `upstream-drafts/`: a wasmer-sdk issue (the stall, repro, the lock offset, and
-        the fire-and-forget `terminate()`), and a comment on nodejs/node#64500 with our CHECK stack and
-        crash rate. Ask the user before filing either.
-     5. Our own workaround meanwhile: keep one long-lived client per process in the test setup,
-        if (2) confirms it helps. Record it as a workaround, not a fix.
-   - Artifacts: repro jobs upload `repro.jsonl`, `p<N>/progress.txt` (last step reached before a
-     crash), `p<N>/watchdog/` on a stall, and `gdb-core.<pid>.txt` on a crash. Raw cores stay on the
-     runner. Node reports contain the runner env: don't commit them.
+1. **Suite stall and V8 crash: diagnosed, drafts ready.** Details and run ids in
+   `spikes/2026-09-27-sdk-0.18-worker-init-hang/findings.md`. Two separate bugs, both triggered by
+   fresh clients with a host `kill()` and **no long-lived client open**:
+   - **SDK stall:** a kill (or close) `Worker::terminate()`s a thread that can be inside malloc/free.
+     The global allocator's spin lock at wasm offset `0x17a2b4` stays held, and every thread spins.
+     Node 22 and 24, any V8 flags. Draft: `upstream-drafts/06`.
+   - **V8 crash:** Node 24 only. The wasm code GC frees import wrappers of a dead native module
+     (`jit_page_->allocations_` CHECK or SIGSEGV). `--no-wasm-code-gc` removes it, and PKU isn't
+     involved. Draft comment for nodejs/node#64500: `upstream-drafts/07`.
+   - **Workaround in the suite:** `packages/core/test/keep-client-open.ts` (a vitest setup file) keeps
+     one client open per test file, since the `kill-close-shared` arm had 0 failures in 6,000
+     iterations. It's a workaround: remove it when the SDK is fixed. Check the suite stress run
+     dispatched with it (see the commit after `5363179`) and record the result in findings.
+   - Next: the user reviews drafts 06 and 07 before anything is filed. Optional: work out *why* an
+     open client prevents both (a scheduler/pool shared across clients? the native module kept
+     alive?), which would sharpen 06.
 2. **Remaining drafts** (`upstream-drafts/`, local only, excluded via `.git/info/exclude`): `04`
    missing-file error code, `05` docs on per-command overlays. Both rewritten in the short tone and
-   re-checked on 0.18.0 (2026-09-26). Ready for the user to review before filing.
+   re-checked on 0.18.0 (2026-09-26). Ready for the user to review before filing, along with 06 and 07.
 3. **Finish M1** (due Oct 1): conformance v0 (the remaining spike probes as tests, plus stdin,
    UTF-8/binary, large stderr, close-while-running), a provenance recorder in the package, and the
    SDK 0.11.0 vs 0.18.0 comparison.

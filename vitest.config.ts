@@ -27,6 +27,7 @@ export default defineConfig({
         test: {
           name: 'wasmer',
           include: ['packages/*/test/**/*.wasmer.test.ts'],
+          setupFiles: ['packages/core/test/keep-client-open.ts'],
           testTimeout: 180_000,
           hookTimeout: 60_000,
           fileParallelism: false,

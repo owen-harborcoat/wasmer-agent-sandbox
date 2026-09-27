@@ -166,5 +166,41 @@ stalls: the main thread and one worker (`worker-145`) are both spinning on `xchg
 stall in 36294840179 (`0x7fcdac17a2b4`). So it's one static lock in the SDK's wasm linear memory, the
 same one in the suite and in the SDK-only repro. Which static sits at `0x17a2b4` isn't known yet.
 
-Not filed upstream yet. Next: find what's at `0x17a2b4`, rerun with a long-lived client, on Node
-22.23, and with `--no-memory-protection-keys`, then write a short issue.
+### `0x17a2b4` is the global allocator's lock
+
+`wasmer_sdk_js_bg.wasm` has no name section, so this comes from scanning its code. The word at
+`0x17a2b4` is only ever accessed by `i32.atomic.rmw.xchg` (7 sites, no `wait`/`notify`), so it's a lock
+that is taken by `swap(1)` in a loop and released by `swap(0)`, and it never parks. The futex-style
+mutexes next to it (`0x17a2e0`, `0x17a2f4`) use cmpxchg + `wait32`/`notify` instead. The seven functions are
+reached from `__wbindgen_malloc`, `__wbindgen_free`, `__wbindgen_realloc` and every `__wbg_*_free`
+export, so it's the global allocator's spin lock (the shape of Rust std's wasm32+atomics dlmalloc
+lock). It sits just past the data segments, in `.bss`.
+
+In the SDK source (`main` at `d1aa52b`, 2026-09-24): a kill goes through wasix `terminate_worker` →
+`SchedulerMessage::TerminateWasmThread` → `terminate_wasm_thread`, which drops the `WorkerHandle`.
+`WorkerHandle::drop` calls `Worker::terminate()` right away (`js/bindgen/src/tasks/worker_handle.rs`).
+Closing the client drops every handle the same way, and the Node adapter doesn't await
+`terminate()`. A worker stopped inside malloc/free on the shared memory never releases the lock.
+
+## Controls (20 jobs × 10 processes × 30 iterations each, ubuntu-24.04)
+
+| Run | Arm | Failed jobs | V8 crash | Stall |
+|---|---|---|---|---|
+| 36300951450 + 36300955555 | baseline, Node 24.21.0 | 8 + 9 / 40 | 16 | 1 |
+| 36331470220 | `kill-close-shared`: one long-lived client | **0 / 20** | 0 | 0 |
+| 36331476279 | Node 22.23.0 | 6 / 20 | **0** | 6 |
+| 36331482459 | `--no-memory-protection-keys` | 10 / 20 | 8 | 2 |
+| 36331488916 | `--no-wasm-code-gc` | 2 / 20 | **0** | 2 |
+
+Every arm took the host-kill path on every iteration (`host kill/terminated` 30/30 per process), and
+`execArgv` in the results confirms the flags. So there are two separate bugs:
+
+- **V8 crash:** Node 24 only, caused by wasm code GC (`--no-wasm-code-gc` removes it), not PKU. Belongs
+  on nodejs/node#64500.
+- **Allocator-lock stall:** Node 22 and 24, with every flag tried. It's the SDK's. On Node 24 the
+  crash usually comes first, which is why stalls looked rare there.
+- A long-lived client prevents both (6,000 iterations). We don't know why yet. The suite now keeps
+  one open per test file (`packages/core/test/keep-client-open.ts`) as a workaround.
+
+Drafts: `upstream-drafts/06` (wasmer-sdk, the stall) and `07` (comment on nodejs/node#64500). Neither
+filed.
