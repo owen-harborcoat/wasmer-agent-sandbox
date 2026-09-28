@@ -31,7 +31,7 @@ Next: LangChain deepagentsjs. Target ~2026-11-07 (see PLAN.md for the four miles
 | `21cefe2`, `39c2ee1` | worker-init deadlock repro + `stress.yml` (suite or repro, many parallel runs) |
 | `5129a92` … `5363179` | repro mode `kill-close` (SDK only) reproduces **both** the stall and a V8 crash; watchdog on the repro, pc/register dumps, core-dump summaries, `processes` / `close_delay_ms` inputs |
 
-Upstream (filed 2026-09-26 with the user's go-ahead): wasmerio/wasmer-sdk
+Upstream (filed 2026-09-26/27 with the user's go-ahead; also wasmerio/wasmer-sdk#542 and nodejs/node#66366, see next steps item 1): wasmerio/wasmer-sdk
 [#539](https://github.com/wasmerio/wasmer-sdk/issues/539) timeout fires late (plus a comment: a
 command on *another* client in between triggers it too, on Windows and Linux),
 [#540](https://github.com/wasmerio/wasmer-sdk/issues/540) SIGPIPE stderr noise,
@@ -77,10 +77,10 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
 
 ## Next steps, in order
 
-0. **Check #539–#541 for replies** before anything else. If a maintainer picks an option on #541,
+0. **Check #539–#542 and nodejs/node#66366 for replies** before anything else. If a maintainer picks an option on #541,
    send that PR first (small, and turnaround matters). Match the repo's tone: short first-person
    prose, a repro and raw output, no templated sections (see the saved memory on public tone).
-1. **Suite stall and V8 crash: diagnosed, drafts ready.** Details and run ids in
+1. **Suite stall and V8 crash: diagnosed and filed.** Details and run ids in
    `spikes/2026-09-27-sdk-0.18-worker-init-hang/findings.md`. Two separate bugs, both triggered by
    fresh clients with a host `kill()` and **no long-lived client open**:
    - **SDK stall:** a kill (or close) `Worker::terminate()`s a thread that can be inside malloc/free.
@@ -104,8 +104,10 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
      doesn't explain the SDK stall, which still happens on Node 22, 24 and 26 at the same `0x17a2b4`.
    - **New, Node 26 only:** `RangeError: Offset is outside the bounds of the DataView` in
      `__wbindgen_string_get` during `Wasmer.close()` (3 of 20 jobs). Not investigated. See findings.md.
-   - Next: the user reviews 06 and 07. Optional: build Node `v24.x-staging` with the two V8 commits on a
-     runner and rerun `kill-close` to prove the backport, before or alongside filing 07.
+   - **Filed 2026-09-27:** 06 as wasmerio/wasmer-sdk#542. 07 as nodejs/node#66366, with a from-source
+     proof (`node-backport.yml` run 36353991873: v24.x-staging as is 8 V8 crashes in 149 processes, with
+     the two V8 commits 0 in 191). Cross-linked on #64500. Next: watch #542 and #66366 for replies. If
+     Node asks for a PR, it's `deps: V8: cherry-pick 68210d500a82` + `9b8ca54d5a6b` onto v24.x-staging.
 2. **Remaining drafts** (`upstream-drafts/`, local only, excluded via `.git/info/exclude`): `04`
    missing-file error code, `05` docs on per-command overlays. Both rewritten in the short tone and
    re-checked on 0.18.0 (2026-09-26). Ready for the user to review before filing, along with 06 and 07.

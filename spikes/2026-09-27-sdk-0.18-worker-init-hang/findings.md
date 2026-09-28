@@ -270,3 +270,21 @@ Wasmer SDK worker error: RangeError [Error]: Offset is outside the bounds of the
 The glue's `getDataViewMemory0()` rebuilds its view whenever `wasm.memory.buffer` changes identity or
 length, so either the pointer from wasm is outside memory or this worker's `memory.buffer` hasn't caught
 up with a grow on another thread. None in the ~770 Node 22 and 24 processes of these runs and baseline 36300951450 (grepped the job logs). Not investigated yet.
+
+### The backport, built and tested
+
+`node-backport.yml` run 36353991873: Node `v24.x-staging` at `13987f4` built from source on ubuntu-24.04
+(reports `24.21.1-pre`, V8 `13.6.233.17-node.53`), once as is and once with V8 `68210d500a` then
+`9b8ca54d5a` applied (both clean, only `deps/v8/src/wasm`). `kill-close`, 20 jobs × 10 processes × 30
+iterations each, host-kill path on every iteration:
+
+| Build | Processes run | V8 CHECK / SIGSEGV | Stall |
+|---|---|---|---|
+| as is | 149 | 3 / 5 | 0 |
+| + the two V8 commits | 191 | **0 / 0** | 1 (`0x17a2b4`, the SDK lock) |
+
+At the unpatched rate (8 in 149) you'd expect about 10 crashes in 191 processes. So the backport fixes the
+V8 crash, and the SDK stall is untouched, as expected.
+
+Filed 2026-09-27: the stall as wasmerio/wasmer-sdk#542, the V8 crash as nodejs/node#66366 (a backport
+request), cross-linked on nodejs/node#64500.
