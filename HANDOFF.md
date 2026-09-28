@@ -77,7 +77,7 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
 
 ## Next steps, in order
 
-0. **Check #539–#542 and nodejs/node#66366 for replies** before anything else. If a maintainer picks an option on #541,
+0. **Check #539–#542, nodejs/node#66366 and PR #66376 for replies** before anything else. If a maintainer picks an option on #541,
    send that PR first (small, and turnaround matters). Match the repo's tone: short first-person
    prose, a repro and raw output, no templated sections (see the saved memory on public tone).
 1. **Suite stall and V8 crash: diagnosed and filed.** Details and run ids in
@@ -106,8 +106,10 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
      `__wbindgen_string_get` during `Wasmer.close()` (3 of 20 jobs). Not investigated. See findings.md.
    - **Filed 2026-09-27:** 06 as wasmerio/wasmer-sdk#542. 07 as nodejs/node#66366, with a from-source
      proof (`node-backport.yml` run 36353991873: v24.x-staging as is 8 V8 crashes in 149 processes, with
-     the two V8 commits 0 in 191). Cross-linked on #64500. Next: watch #542 and #66366 for replies. If
-     Node asks for a PR, it's `deps: V8: cherry-pick 68210d500a82` + `9b8ca54d5a6b` onto v24.x-staging.
+     the two V8 commits 0 in 191). Cross-linked on #64500. A contributor (ThatKJ) opened the backport
+     PR nodejs/node#66376 on 2026-09-28. Its deps/v8 diff is line-for-line identical to what the proof run
+     built, and we commented with the result. Next: watch #542 and #66376 (needs a collaborator review and
+     CI start).
 2. **Remaining drafts** (`upstream-drafts/`, local only, excluded via `.git/info/exclude`): `04`
    missing-file error code, `05` docs on per-command overlays. Both rewritten in the short tone and
    re-checked on 0.18.0 (2026-09-26). Ready for the user to review before filing, along with 06 and 07.
