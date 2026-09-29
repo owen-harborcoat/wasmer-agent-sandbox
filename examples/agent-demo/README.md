@@ -4,7 +4,7 @@ A live model does a small data task by writing and running Python in a local Was
 [`packages/ai-sdk`](../../packages/ai-sdk). Every command and its output is printed. The guest sees only
 `sales.csv`, with the network off and no host environment.
 
-Needs Node 24 (the repo's `.node-version`) or 22.19+. With fnm: `fnm exec --using=24 pnpm ...`.
+Needs Node 24 (the repo's `.node-version`) or 22.19+. With fnm on Windows: `fnm exec --using=24 pnpm.cmd ...` (fnm can't spawn the `pnpm` shim by that name).
 
 ```bash
 pnpm install && pnpm build
