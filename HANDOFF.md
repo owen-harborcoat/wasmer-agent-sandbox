@@ -115,6 +115,13 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
      opens the REPL. Already open upstream as wasmerio/wasmer#6425 (child processes only). Pinned in
      `sandbox.wasmer.test.ts`, and `session.description` warns the model. After Oct 5, comment on #6425
      that top-level SDK commands are affected too.
+   - **Windows-only SDK crashes, intermittent** (3 of the last 15 CI runs, each passed on rerun): a
+     `RefCell already borrowed` panic at `wasix/src/state/handles/thread_local.rs:126` that hung the suite
+     (36331465337, Node 22.19.0), `RuntimeError: memory access out of bounds` in the SIGPIPE probe
+     (36333372121, Node 24.21.0), and `RefCell already borrowed` at `lib/api/src/backend/js/jspi.rs:62`,
+     then "Scheduler is dead", in the SIGPIPE probe (36518385645 attempt 1, Node 24.21.0). Guests there
+     die mid-pipeline. It might be the same class as #542 (state left inconsistent by a thread
+     stopped partway), but that's unproven. Not filed. Worth a repro loop after Oct 5.
 2. **Remaining drafts** (`upstream-drafts/`, local only, excluded via `.git/info/exclude`): `04`
    missing-file error code, `05` docs on per-command overlays. Both rewritten in the short tone and
    re-checked on 0.18.0 (2026-09-26). Ready for the user to review before filing, along with 06 and 07.
