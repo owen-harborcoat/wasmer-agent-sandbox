@@ -31,6 +31,8 @@ export class WasmerSandboxSession implements SandboxSession {
       `Commands run in bash. Working directory: ${this.#sandbox.defaultWorkingDirectory}. HOME: ${this.#sandbox.home}.`,
       `Only files under ${WORKSPACE_DIR} persist between commands; /tmp and every other path start empty for each command.`,
       network === 'disabled' ? 'Network access is disabled.' : `Network mode: ${network}.`,
+      // wasmerio/wasmer#6425: every stdio fd reports as a terminal.
+      'Programs see stdin and stdout as a terminal even when piped, so run scripts from a file or with -c: piping a script into an interpreter (python -) starts its interactive prompt.',
     ].join('\n');
   }
 

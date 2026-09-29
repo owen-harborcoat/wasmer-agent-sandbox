@@ -1,0 +1,66 @@
+Local Wasmer sandbox + AI SDK model kimi-k3
+guest sees only /workspace/sales.csv · network off · no host env
+
+Task: sales.csv has monthly units and price per region. Using Python, find the region with the most revenue in the latest month and each region's revenue growth from January to March. Write a short markdown summary to report.md, then give me the answer in two sentences.
+
+2.9s $ ls -la /workspace/ && cat /workspace/sales.csv
+    exit 0 in 0.5s, inside Wasmer
+    total 210
+    drwxrwxrwx 1 somebody somegroup   0 Sep 29 03:40 .
+    drwxrwxrwx 1 somebody somegroup   0 Sep 29 03:40 ..
+    drwxrwxrwx 1 somebody somegroup   0 Sep 29 03:40 .home
+    -rwxrwxrwx 1 somebody somegroup 210 Sep 29 03:40 sales.csv
+    month,region,units,price
+    2026-01,north,120,9.5
+    2026-01,south,80,11
+    2026-01,west,95,10
+    2026-02,north,135,9.5
+    2026-02,south,70,11
+    2026-02,west,110,10
+    2026-03,north,150,9
+    2026-03,south,65,11.5
+    2026-03,west,140,10
+
+22.8s $ cat > /workspace/analyze.py << 'EOF'
+import csv
+from collections import defaultdict
+
+# revenue[month][region] = units * price
+revenue = defaultdict(dict)
+with open('/workspace/sales.csv') as f:
+    for row in csv.DictReader(f):
+        revenue[row['month']][row['region']] = int(row['units']) * float(row['price'])
+
+months = sorted(revenue)
+latest = months[-1]
+first = months[0]
+
+# Top region in late…
+    exit 0 in 1.0s, inside Wasmer
+    Latest month: 2026-03
+    Top region: west ($1,400.00)
+    north: $1,140.00 -> $1,350.00 (+18.4%)
+    south: $880.00 -> $747.50 (-15.1%)
+    west: $950.00 -> $1,400.00 (+47.4%)
+    ---
+    # Sales Revenue Summary
+    
+    **Period analyzed:** 2026-01 to 2026-03
+    
+    ## Top Region in Latest Month (2026-03)
+    
+    - **west** led with **$1,400.00** in revenue (north: $1,350.00, south: $747.50, west: $1,400.00).
+    
+    ## Revenue Growth: January to March
+    
+    | Region | Jan Revenue | Mar Revenue | Growth |
+    |--------|------------:|------------:|-------:|
+    | north | $1,140.00 | $1,350.00 | +18.4% |
+    | south | $880.00 | $747.50 | -15.1% |
+    | west | $950.00 | $1,400.00 | +47.4% |
+
+report.md in the sandbox: 15 lines
+
+Answer: Done — `report.md` is saved with the full breakdown. In the latest month (March 2026), the **west** region generated the most revenue at $1,400, edging out north's $1,350. From January to March, west grew the fastest at **+47.4%** ($950 → $1,400), north rose **+18.4%** ($1,140 → $1,350), and south declined **−15.1%** ($880 → $747.50).
+
+3 model steps · 2 sandbox commands · 3991 tokens · 29.8s

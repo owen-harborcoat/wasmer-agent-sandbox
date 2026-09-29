@@ -118,6 +118,7 @@ describe('WasmerSandboxSession', () => {
     expect(session.description).toContain('wasmer/bash@1.0.25');
     expect(session.description).toContain('Only files under /workspace persist');
     expect(session.description).toContain('Network access is disabled.');
+    expect(session.description).toContain('run scripts from a file or with -c');
   });
 
   describe('run', () => {

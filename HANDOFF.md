@@ -44,7 +44,7 @@ confirm that the abort, network-default and timeout backstop tests fail when the
 removed, and a poisoned `dist/index.js` confirms tests use the sources. **Known problem:** without a
 long-lived client, the SDK can hang the process after a kill, and Node 24 can crash in V8's wasm code
 GC. Both are diagnosed in `spikes/2026-09-27-sdk-0.18-worker-init-hang/findings.md` (next steps, item 1), and keeping a
-client open in the suite makes them rarer but doesn't prevent them (1 stall in 40 stress jobs). The watchdog kills and documents a stall within 10 minutes. **Not yet verified:** live models, other SDK versions, a nightly against a newer
+client open in the suite makes them rarer but doesn't prevent them (1 stall in 40 stress jobs). The watchdog kills and documents a stall within 10 minutes. Live model: `examples/agent-demo` (Fireworks Kimi K3) ran correctly 4 of 4 times on 2026-09-28. **Not yet verified:** other SDK versions, a nightly against a newer
 SDK (the first scheduled nightly ran 2026-09-26 on 0.18.0 and hit the stall).
 
 ## Run it
@@ -110,6 +110,11 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
      PR nodejs/node#66376 on 2026-09-28. Its deps/v8 diff is line-for-line identical to what the proof run
      built, and we commented with the result. Next: watch #542 and #66376 (needs a collaborator review and
      CI start).
+   - **Guest stdio always reports as a TTY** (found by the live demo, 2026-09-28): `[ -t 0/1/2 ]` is
+     true with stdin closed, output captured, or through a pipe or redirect, so `python -` fed a script
+     opens the REPL. Already open upstream as wasmerio/wasmer#6425 (child processes only). Pinned in
+     `sandbox.wasmer.test.ts`, and `session.description` warns the model. After Oct 5, comment on #6425
+     that top-level SDK commands are affected too.
 2. **Remaining drafts** (`upstream-drafts/`, local only, excluded via `.git/info/exclude`): `04`
    missing-file error code, `05` docs on per-command overlays. Both rewritten in the short tone and
    re-checked on 0.18.0 (2026-09-26). Ready for the user to review before filing, along with 06 and 07.

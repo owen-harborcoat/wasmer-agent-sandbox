@@ -1,5 +1,6 @@
 packages:
   - packages/*
+  - examples/*
 
 # Optional native accelerator for ws (via the SDK's WISP client); ws works without it.
 ignoredBuiltDependencies:

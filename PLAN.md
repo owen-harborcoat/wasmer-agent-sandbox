@@ -215,8 +215,10 @@ spikes/              dated throwaway experiments with raw results
   ports throw `HarnessCapabilityUnsupportedError`, no `setNetworkPolicy`, no resume. Timeouts and
   truncation are reported on stderr. It works with the harness's own `resolveSandboxHomeDir` and
   `resolveSandboxDefaultWorkingDirectory`. End-to-end `generateText` test with `MockLanguageModelV4`:
-  a model-requested command runs in Wasmer, and its output is fed back. README with usage. Not yet run
-  against a live model.
+  a model-requested command runs in Wasmer, and its output is fed back. README with usage. Live model run
+  (2026-09-28): `examples/agent-demo` on Fireworks Kimi K3, right in 4 of 4 runs, ~30 s each. That run found
+  that every guest stdio fd reports as a terminal (wasmerio/wasmer#6425), so `session.description` now
+  tells the model to avoid piping scripts into interpreters, and a core test pins the bug.
   Suite: 48 real-Wasmer tests + 7 unit tests, 11 consecutive clean full runs. Two flakes found
   and fixed along the way (a 500 ms limit on a cold pipeline; stream chunks merging under load).
   Mutation check: removing the backstop fails both first-command timeout tests.

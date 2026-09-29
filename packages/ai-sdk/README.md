@@ -49,9 +49,9 @@ try {
 }
 ```
 
-The model string goes through the AI Gateway; use any AI SDK model. This snippet has not been run
-against a live model. The same loop runs in `test/generate-text.wasmer.test.ts` with a scripted
-mock model, so it needs no API key.
+The model string goes through the AI Gateway; use any AI SDK model. The same loop runs against a live
+Fireworks model in [`examples/agent-demo`](../../examples/agent-demo), and with a scripted mock model
+(no API key) in `test/generate-text.wasmer.test.ts`.
 
 `session.description` tells the model what it's working with: installed packages, working
 directory, what persists, and network access.
@@ -80,5 +80,9 @@ Pass `{ sandbox }` instead to wrap a `WasmerSandbox` you manage. The provider th
 - **No ports, snapshots or resume.** Bridge-backed harness adapters that need an exposed port
   (Claude Code, Codex) get `HarnessCapabilityUnsupportedError`. `setNetworkPolicy` is not
   implemented: the network mode is fixed when the sandbox is created.
+- **Every program sees stdin and stdout as a terminal**, even when piped
+  ([wasmerio/wasmer#6425](https://github.com/wasmerio/wasmer/issues/6425)), so `echo ... | python -`
+  opens Python's interactive prompt. `session.description` tells the model to run scripts from a file
+  or with `-c` instead.
 - **Only the installed packages' commands exist.** `wasmer/bash` brings bash and a coreutils set
   (no `uname`, `which`, `git` or package manager).
