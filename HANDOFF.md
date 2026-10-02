@@ -113,8 +113,16 @@ In Git Bash, `pnpm` resolves to a shell shim that `fnm exec` can't spawn, so use
    - **Guest stdio always reports as a TTY** (found by the live demo, 2026-09-28): `[ -t 0/1/2 ]` is
      true with stdin closed, output captured, or through a pipe or redirect, so `python -` fed a script
      opens the REPL. Already open upstream as wasmerio/wasmer#6425 (child processes only). Pinned in
-     `sandbox.wasmer.test.ts`, and `session.description` warns the model. After Oct 5, comment on #6425
-     that top-level SDK commands are affected too.
+     `sandbox.wasmer.test.ts`, and `session.description` warns the model. **SDK 0.19.0 (2026-09-28)
+     partly fixes it** (checked on Windows in a scratch install, repo still pinned to 0.18.0): pipes and
+     redirects inside the guest now report correctly (`echo ... | python -` sees stdin as not a tty, no
+     REPL), but the top-level command's own stdio still reports as a tty (`python -c` with host-captured
+     output says `[True, True, True]`). After Oct 5, comment on #6425 with that split. The pinned test
+     will fail on its pipe/redirect lines when we bump, as intended.
+   - **SDK 0.19.0 vs our issues** (same scratch check): #539 still fires late (500 ms timeout ended at
+     5,204 ms, when `sleep 5` finished), #541 `engines` still `>=20`, #540 not checkable on Windows. The
+     release only touched `browser_http.rs` and `host_filesystem.rs` in bindgen, so #542's scheduler and
+     worker code is unchanged. Bump after Oct 5, with a stress run, not before the demo.
    - **Windows-only SDK crashes, intermittent** (3 of the last 15 CI runs, each passed on rerun): a
      `RefCell already borrowed` panic at `wasix/src/state/handles/thread_local.rs:126` that hung the suite
      (36331465337, Node 22.19.0), `RuntimeError: memory access out of bounds` in the SIGPIPE probe
