@@ -273,13 +273,13 @@ describe('conformance', () => {
 
     it('ships the tools the shell package is pinned for, and not git or which', async () => {
       const result = await sandbox.exec(
-        'for c in sh realpath base64 sha256sum od tr head seq which git; do ' +
+        'for c in sh realpath base64 sha256sum od tr head seq uname which git; do ' +
           'command -v $c >/dev/null && echo "$c yes" || echo "$c no"; done',
       );
 
       expect(result.stdout).toBe(
         'sh yes\nrealpath yes\nbase64 yes\nsha256sum yes\nod yes\ntr yes\nhead yes\nseq yes\n' +
-          'which no\ngit no\n',
+          'uname yes\nwhich no\ngit no\n',
       );
       expect((await sandbox.exec('sh -c "echo via sh"')).stdout).toBe('via sh\n');
     });

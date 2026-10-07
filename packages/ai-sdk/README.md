@@ -86,4 +86,4 @@ Pass `{ sandbox }` instead to wrap a `WasmerSandbox` you manage. The provider th
   `@wasmer/sdk` 0.19.0 (`echo ... | python -` works). `session.description` tells the model to run
   scripts from a file or with `-c`.
 - **Only the installed packages' commands exist.** `wasmer/bash` brings bash and a coreutils set
-  (no `uname`, `which`, `git` or package manager).
+  (no `which`, `git` or package manager).
