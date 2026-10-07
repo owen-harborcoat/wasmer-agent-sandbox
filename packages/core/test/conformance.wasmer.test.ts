@@ -361,7 +361,12 @@ describe('conformance', () => {
 // /dev/tcp actually does under each network policy.
 describe('conformance: bash /dev/tcp', () => {
   const wasmer = new Wasmer();
-  const server = createServer((socket) => socket.end('pong\n'));
+  // bash leaves its socket half used, so the guest side can reset it (ECONNRESET in stress run
+  // 37558335759). That's the guest's business, not a test failure.
+  const server = createServer((socket) => {
+    socket.on('error', () => {});
+    socket.end('pong\n');
+  });
   let port = 0;
   let connections = 0;
 
