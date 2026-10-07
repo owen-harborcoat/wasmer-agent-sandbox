@@ -243,10 +243,10 @@ describe('conformance', () => {
       expect(output).toMatchObject({ exitCode: 143, reason: 'terminated' });
     });
 
-    // @wasmer/sdk 0.18.0 wrote the runtime lines from wasmerio/wasmer-sdk#540 (`Program recieved
-    // termination signal`, then `fatal signal: Aborted` ×30) into the stderr of every terminated
-    // guest on Windows 11. 0.19.0 doesn't. #540 itself (SIGPIPE) is checked on the Linux runners.
-    it('keeps runtime signal lines out of a terminated guest’s stderr', async () => {
+    // Same runtime lines as wasmerio/wasmer-sdk#540 (there from SIGPIPE): terminate() of a guest
+    // without a trap writes them into the command's own stderr, on Windows and Linux. Gone in
+    // @wasmer/sdk 0.19.0; on the bump, expect '' here.
+    it('writes runtime signal lines into stderr on terminate() (wasmerio/wasmer-sdk#540)', async () => {
       const guest = await sandbox.sdk
         .shell('sleep 30')
         .spawn({ stdout: 'capture', stderr: 'capture' });
@@ -255,7 +255,7 @@ describe('conformance', () => {
       const output = await guest.wait();
 
       expect(output).toMatchObject({ exitCode: 143, reason: 'terminated' });
-      expect(output.stderr.text()).toBe('');
+      expect(output.stderr.text()).toMatch(/^Program recieved termination signal: Terminated\n/);
     });
 
     // Deliberately not tested here: a guest that SIGTERMs itself (`kill -TERM $$`) exits 27, and

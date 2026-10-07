@@ -80,10 +80,10 @@ Pass `{ sandbox }` instead to wrap a `WasmerSandbox` you manage. The provider th
 - **No ports, snapshots or resume.** Bridge-backed harness adapters that need an exposed port
   (Claude Code, Codex) get `HarnessCapabilityUnsupportedError`. `setNetworkPolicy` is not
   implemented: the network mode is fixed when the sandbox is created.
-- **Each command's own stdin and stdout report as a terminal**, although the output is captured
-  ([wasmerio/wasmer#6425](https://github.com/wasmerio/wasmer/issues/6425)), so programs may print
-  prompts or colour codes. Pipes and redirects inside a command report correctly since
-  `@wasmer/sdk` 0.19.0 (`echo ... | python -` works). `session.description` tells the model to run
-  scripts from a file or with `-c`.
+- **Every program sees stdin and stdout as a terminal**, even when piped
+  ([wasmerio/wasmer#6425](https://github.com/wasmerio/wasmer/issues/6425)), so `echo ... | python -`
+  opens Python's interactive prompt. `session.description` tells the model to run scripts from a file
+  or with `-c` instead. `@wasmer/sdk` 0.19.0 fixes the piped case, but this package stays on 0.18.0
+  for now (see the repo README).
 - **Only the installed packages' commands exist.** `wasmer/bash` brings bash and a coreutils set
   (no `which`, `git` or package manager).

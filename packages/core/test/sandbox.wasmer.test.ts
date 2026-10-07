@@ -64,15 +64,16 @@ describe('WasmerSandbox', () => {
     expect(result.stdout).toBe('0 tty\n1 tty\n2 tty\n');
   });
 
-  // Fixed in @wasmer/sdk 0.19.0 (0.18.0 said tty for both), so `echo ... | python -` no longer
-  // opens the REPL.
-  it('reports pipes and redirects inside the guest as not a terminal', async () => {
+  // Same bug, inside the guest: interpreters treat piped scripts as interactive (`echo ... | python -`
+  // shows `>>>`). Fixed in @wasmer/sdk 0.19.0, which we can't pin yet
+  // (spikes/2026-10-06-sdk-0.19-refcell-panic); flip this to 'pipe no\nredirect no\n' on the bump.
+  it('reports pipes and redirects inside the guest as a terminal too (wasmerio/wasmer#6425)', async () => {
     const result = await sandbox.exec(
       'echo | { [ -t 0 ] && echo "pipe tty" || echo "pipe no"; }; ' +
         '{ [ -t 1 ] && echo "redirect tty" || echo "redirect no"; } > out.txt; cat out.txt',
     );
 
-    expect(result.stdout).toBe('pipe no\nredirect no\n');
+    expect(result.stdout).toBe('pipe tty\nredirect tty\n');
   });
 
   it('runs in /workspace by default, where injected files live', async () => {
