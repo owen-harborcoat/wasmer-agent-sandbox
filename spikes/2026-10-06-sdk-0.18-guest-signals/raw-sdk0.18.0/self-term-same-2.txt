@@ -1,0 +1,55 @@
+{"sdk":"0.18.0","node":"24.21.0","platform":"win32","osRelease":"10.0.26200","arch":"x64","cache":"warm","shape":"self-term","iterations":20,"scope":"same"}
+{"i":0,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":211}
+{"i":1,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":81}
+{"i":2,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":53}
+{"i":3,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":57}
+Wasmer SDK worker error: Error [RuntimeError]: memory access out of bounds
+    at wasm://wasm/01254326:wasm-function[2954]:0x38da5f
+    at wasm://wasm/01254326:wasm-function[2954]:0x38da86
+    at wasm://wasm/01254326:wasm-function[2954]:0x38da86
+    at wasm://wasm/01254326:wasm-function[2954]:0x38da86
+    at wasm://wasm/01254326:wasm-function[3696]:0x3b96a4
+    at wasm://wasm/01254326:wasm-function[2363]:0x3588ae
+    at wasm://wasm/01254326:wasm-function[1974]:0x31fb40
+    at wasm://wasm/01254326:wasm-function[5918]:0x3e8b1b
+    at wasm://wasm/01254326:wasm-function[2504]:0x372c48
+    at wasm://wasm/01254326:wasm-function[2414]:0x35e349
+    at wasm://wasm/01254326:wasm-function[1478]:0x2cdecb
+    at wasm://wasm/01254326:wasm-function[2163]:0x336cff
+    at wasm://wasm/01254326:wasm-function[2034]:0x327d55
+    at wasm://wasm/01254326:wasm-function[359]:0x7cf65
+    at wasm://wasm/01254326:wasm-function[536]:0x179249
+    at wasm://wasm/01254326:wasm-function[463]:0x138346
+    at wasm://wasm/01254326:wasm-function[893]:0x23fc1e
+    at wasm://wasm/01254326:wasm-function[1960]:0x31dfdc
+    at wasm://wasm/01254326:wasm-function[2813]:0x38511e
+    at wasm://wasm/01254326:wasm-function[4807]:0x3da8cc
+    at wasm://wasm/01254326:wasm-function[6185]:0x3eeea7
+    at wasm_bindgen_569eb95f3a8fb3d6___convert__closures_____invoke___wasm_bindgen_569eb95f3a8fb3d6___JsValue__core_d7559254c0ef046e___result__Result_____wasm_bindgen_569eb95f3a8fb3d6___JsError___true_ (node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:2605:22)
+    at real (node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:2871:20)
+node_modules/@wasmer/sdk/dist/index.js:79
+            return new WasmerError(error.message, code, {
+                   ^
+
+WasmerError: command execution failed: unable to spawn the command: Initialization function failed - the thread pool is shut down: Scheduler is dead
+    at toWasmerError (node_modules/@wasmer/sdk/dist/index.js:79:20)
+    at rethrow (node_modules/@wasmer/sdk/dist/index.js:62:15)
+    at async Command.run (node_modules/@wasmer/sdk/dist/index.js:857:40)
+    at async spikes/2026-10-06-sdk-0.18-guest-signals/repro.mjs:53:20 {
+  code: 'EXECUTION_ERROR',
+  [cause]: Error [WasmerError]: command execution failed: unable to spawn the command: Initialization function failed - the thread pool is shut down: Scheduler is dead
+      at __wbg_new_b667d279fd5aa943 (node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:1987:25)
+      at wasm://wasm/01254326:wasm-function[6867]:0x3f7b35
+      at wasm://wasm/01254326:wasm-function[3687]:0x3b9294
+      at wasm://wasm/01254326:wasm-function[2092]:0x32f1d7
+      at wasm://wasm/01254326:wasm-function[443]:0x11bf28
+      at wasm://wasm/01254326:wasm-function[1960]:0x31dfdc
+      at wasm://wasm/01254326:wasm-function[2813]:0x38511e
+      at wasm://wasm/01254326:wasm-function[4807]:0x3da8cc
+      at wasm://wasm/01254326:wasm-function[6185]:0x3eeea7
+      at wasm_bindgen_569eb95f3a8fb3d6___convert__closures_____invoke___wasm_bindgen_569eb95f3a8fb3d6___JsValue__core_d7559254c0ef046e___result__Result_____wasm_bindgen_569eb95f3a8fb3d6___JsError___true_ (node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:2605:22) {
+    code: 'EXECUTION_ERROR'
+  }
+}
+
+Node.js v24.21.0

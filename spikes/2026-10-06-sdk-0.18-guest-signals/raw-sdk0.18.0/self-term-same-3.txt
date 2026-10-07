@@ -1,0 +1,18 @@
+{"sdk":"0.18.0","node":"24.21.0","platform":"win32","osRelease":"10.0.26200","arch":"x64","cache":"warm","shape":"self-term","iterations":20,"scope":"same"}
+{"i":0,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":246}
+wasm://wasm/01254326:1
+
+
+RuntimeError: table index is out of bounds
+    at wasm://wasm/01254326:wasm-function[4166]:0x3c9d74
+    at wasm://wasm/01254326:wasm-function[561]:0x18b6fc
+    at wasm://wasm/01254326:wasm-function[397]:0xd433a
+    at wasm://wasm/01254326:wasm-function[1904]:0x30ec97
+    at wasm://wasm/01254326:wasm-function[540]:0x17baf4
+    at wasm://wasm/01254326:wasm-function[3632]:0x3b6dcf
+    at wasm://wasm/01254326:wasm-function[629]:0x1b4238
+    at wasm://wasm/01254326:wasm-function[339]:0x30b49
+    at wasm://wasm/01254326:wasm-function[443]:0x11b535
+    at wasm://wasm/01254326:wasm-function[1960]:0x31dfdc
+
+Node.js v24.21.0
