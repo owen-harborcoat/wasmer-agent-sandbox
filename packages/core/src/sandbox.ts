@@ -4,6 +4,7 @@ import {
   type FileContents,
   type NetworkPolicy,
   type Package,
+  type PackageLoadProgress,
   type PackageSource,
   type Process,
   type Sandbox,
@@ -110,10 +111,20 @@ export interface SpawnedCommand {
   kill(): Promise<void>;
 }
 
-/** Exact package identities resolved for this sandbox, e.g. `wasmer/bash@1.0.25`. */
+/** Where this sandbox's packages came from, for conformance reports. */
 export interface SandboxProvenance {
+  /** Exact identities of the packages this sandbox was created with, e.g. `wasmer/bash@1.0.25`. */
   readonly packages: readonly string[];
+  /** Every package the SDK loaded for them, dependencies included (`wasmer/coreutils@1.0.27`). */
+  readonly resolvedPackages: readonly string[];
   readonly network: NetworkPolicy['mode'];
+  /**
+   * `warm` if every resolved package came from a cache (the client's or the `.wasmer` directory),
+   * `cold` if none did, `partial` otherwise. As the SDK reports it while loading.
+   */
+  readonly packageCache: 'warm' | 'cold' | 'partial';
+  /** Package bytes downloaded while creating this sandbox. */
+  readonly downloadedBytes: number;
 }
 
 /** A file path that the sandbox cannot persist or expose through its filesystem API. */
@@ -181,9 +192,15 @@ export class WasmerSandbox {
     let sdk: Sandbox | undefined;
     try {
       signal?.throwIfAborted();
+      let loaded: PackageLoadProgress | undefined;
       const [shell, ...extra] = await wasmer.packages.loadMany(
         [options.shellPackage ?? DEFAULT_SHELL_PACKAGE, ...(options.packages ?? [])],
-        signal ? { signal } : {},
+        {
+          ...(signal ? { signal } : {}),
+          onProgress: (progress) => {
+            loaded = progress;
+          },
+        },
       );
       const packages = [shell, ...extra] as Package[];
       sdk = await wasmer.sandboxes.create({
@@ -201,7 +218,11 @@ export class WasmerSandbox {
         sdk,
         limits,
         abortGracePeriodMs,
-        provenance: { packages: packages.map((pkg) => pkg.id), network: network.mode },
+        provenance: {
+          packages: packages.map((pkg) => pkg.id),
+          network: network.mode,
+          ...cacheProvenance(loaded),
+        },
         home: env.HOME,
       });
     } catch (error) {
@@ -386,6 +407,19 @@ function timeoutBackstop(guest: Process, timeoutMs: number) {
     /** Our kill surfaces as `terminated`; report it as the timeout it was. */
     reason: (reason: ExitReason): ExitReason =>
       fired && reason === 'terminated' ? 'timeout' : reason,
+  };
+}
+
+/** @internal Exported for unit tests. */
+export function cacheProvenance(
+  progress: PackageLoadProgress | undefined,
+): Pick<SandboxProvenance, 'resolvedPackages' | 'packageCache' | 'downloadedBytes'> {
+  if (progress === undefined) throw new Error('Wasmer reported no package load progress');
+  const cached = progress.packages.filter((pkg) => pkg.cached).length;
+  return {
+    resolvedPackages: progress.packages.map((pkg) => pkg.id),
+    packageCache: cached === progress.packages.length ? 'warm' : cached === 0 ? 'cold' : 'partial',
+    downloadedBytes: progress.download.downloadedBytes,
   };
 }
 

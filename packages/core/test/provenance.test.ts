@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { release } from 'node:os';
 import { describe, expect, it } from 'vitest';
 import { collectProvenance } from '../src/index.js';
 
@@ -13,5 +14,7 @@ describe('collectProvenance', () => {
     expect(provenance.sdk.version).toBe(manifest.dependencies['@wasmer/sdk']);
     expect(provenance.node).toBe(process.versions.node);
     expect(provenance.platform).toBe(process.platform);
+    expect(provenance.osRelease).toBe(release());
+    expect(provenance.arch).toBe(process.arch);
   });
 });

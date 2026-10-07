@@ -1,12 +1,18 @@
 import { readFile } from 'node:fs/promises';
+import { release } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/** Where a result came from: attached to every conformance report. */
+/**
+ * Where a result came from: attached to every conformance report. Package versions and cache
+ * state are per sandbox, in `WasmerSandbox.provenance`.
+ */
 export interface Provenance {
   readonly sdk: { readonly name: '@wasmer/sdk'; readonly version: string };
   readonly node: string;
   readonly platform: NodeJS.Platform;
+  /** Kernel release, e.g. `6.17.0-1022-azure` or `10.0.26200`. */
+  readonly osRelease: string;
   readonly arch: string;
 }
 
@@ -38,6 +44,7 @@ export async function collectProvenance(): Promise<Provenance> {
     sdk: { name: '@wasmer/sdk', version: await wasmerSdkVersion() },
     node: process.versions.node,
     platform: process.platform,
+    osRelease: release(),
     arch: process.arch,
   };
 }

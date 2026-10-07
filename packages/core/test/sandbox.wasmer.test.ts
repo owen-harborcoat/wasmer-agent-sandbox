@@ -190,10 +190,14 @@ describe('WasmerSandbox', () => {
     expect(performance.now() - started).toBeLessThan(3_500);
   });
 
-  it('records the exact packages it resolved and the network mode', () => {
+  it('records the exact packages it resolved, the network mode and the cache state', () => {
+    // keep-client-open.ts has already loaded the shell package by the time this file runs.
     expect(sandbox.provenance).toEqual({
       packages: [DEFAULT_SHELL_PACKAGE.replace('@=', '@')],
       network: 'disabled',
+      resolvedPackages: [DEFAULT_SHELL_PACKAGE.replace('@=', '@'), 'wasmer/coreutils@1.0.27'],
+      packageCache: 'warm',
+      downloadedBytes: 0,
     });
   });
 
