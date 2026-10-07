@@ -46,8 +46,8 @@ importers:
         version: link:../core
     devDependencies:
       '@wasmer/sdk':
-        specifier: 0.18.0
-        version: 0.18.0
+        specifier: 0.19.1
+        version: 0.19.1
       ai:
         specifier: 7.0.114
         version: 7.0.114(zod@4.6.5)
@@ -61,8 +61,8 @@ importers:
   packages/core:
     dependencies:
       '@wasmer/sdk':
-        specifier: 0.18.0
-        version: 0.18.0
+        specifier: 0.19.1
+        version: 0.19.1
 
 packages:
 
@@ -430,8 +430,8 @@ packages:
   '@vitest/spy@5.0.1':
     resolution: {integrity: sha512-rbto/mF/SGERxEgYOek7Xm6B9b+y+mVoo+f4b2LymYO8zM1b7uB5nHuhVMTP2hxdzgxvGiZYGxGIaMvL5y180Q==}
 
-  '@wasmer/sdk@0.18.0':
-    resolution: {integrity: sha512-umeaf9asTL5xS6Sp6D3tDiO4v/B3Z7gLsLWra0BDKkThX0+XTZWhb5nl77sqlfTUjTSxOLpBN7xQivNSsBLQBQ==}
+  '@wasmer/sdk@0.19.1':
+    resolution: {integrity: sha512-wAfPud0PkSV2dFaliehEidslpz4iZBWfvVfBOrKnS6erdN3pj2kSUCtRqekMyMOMzLntVog6ZrCzBKd3ks1E7g==}
     engines: {node: '>=20'}
 
   '@workflow/serde@4.1.0':
@@ -988,7 +988,7 @@ snapshots:
 
   '@vitest/spy@5.0.1': {}
 
-  '@wasmer/sdk@0.18.0':
+  '@wasmer/sdk@0.19.1':
     dependencies:
       '@mercuryworkshop/wisp-js': 0.4.1
     transitivePeerDependencies:

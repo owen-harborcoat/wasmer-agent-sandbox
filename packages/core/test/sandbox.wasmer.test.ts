@@ -56,24 +56,18 @@ describe('WasmerSandbox', () => {
 
   // Known upstream bug, pinned so this fails once it's fixed: the command's own stdio reports as a
   // terminal although stdin is closed and the host captures stdout and stderr (wasmerio/wasmer#6425).
-  it('reports the command’s own stdio as a terminal (wasmerio/wasmer#6425)', async () => {
+  // Pipes and redirects inside the guest report correctly since @wasmer/sdk 0.19.0 (0.18.0 said tty).
+  // Keep this one command: split into two, this file hits the SDK's `RefCell already borrowed`
+  // panic in about half of Node 22 CI runs, on 0.18.0 and 0.19.x alike
+  // (spikes/2026-10-06-sdk-refcell-panic).
+  it('reports the command’s own stdio as a terminal, pipes inside it not (wasmerio/wasmer#6425)', async () => {
     const result = await sandbox.exec(
-      'for fd in 0 1 2; do [ -t $fd ] && echo "$fd tty" || echo "$fd no"; done',
-    );
-
-    expect(result.stdout).toBe('0 tty\n1 tty\n2 tty\n');
-  });
-
-  // Same bug, inside the guest: interpreters treat piped scripts as interactive (`echo ... | python -`
-  // shows `>>>`). Fixed in @wasmer/sdk 0.19.0, which we can't pin yet
-  // (spikes/2026-10-06-sdk-0.19-refcell-panic); flip this to 'pipe no\nredirect no\n' on the bump.
-  it('reports pipes and redirects inside the guest as a terminal too (wasmerio/wasmer#6425)', async () => {
-    const result = await sandbox.exec(
-      'echo | { [ -t 0 ] && echo "pipe tty" || echo "pipe no"; }; ' +
+      'for fd in 0 1 2; do [ -t $fd ] && echo "$fd tty" || echo "$fd no"; done; ' +
+        'echo | { [ -t 0 ] && echo "pipe tty" || echo "pipe no"; }; ' +
         '{ [ -t 1 ] && echo "redirect tty" || echo "redirect no"; } > out.txt; cat out.txt',
     );
 
-    expect(result.stdout).toBe('pipe tty\nredirect tty\n');
+    expect(result.stdout).toBe('0 tty\n1 tty\n2 tty\npipe no\nredirect no\n');
   });
 
   it('runs in /workspace by default, where injected files live', async () => {

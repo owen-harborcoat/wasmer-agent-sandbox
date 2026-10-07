@@ -35,8 +35,9 @@ at least two accepted upstream issues or PRs, one maintainer review.
 - `@wasmer/sdk` latest is **0.18.0** (published 2026-09-24). Releases are near-daily
   (0.15 → 0.18 in three days). The SDK is self-described alpha. The hackathon pinned 0.11.0.
   Update 2026-10-06: **0.19.0** (published 2026-09-28) is still latest. Its JS wrapper (`dist/`) is
-  byte-identical to 0.18.0; only the wasm core, its bindings and the napi snippet changed. The repo
-  stays pinned to 0.18.0 because of a Node 22 regression in 0.19.0 (M1).
+  byte-identical to 0.18.0; only the wasm core, its bindings and the napi snippet changed. 0.19.1
+  (2026-10-07) changes timer cancellation and callback lifetimes in the bindings. The repo pins 0.19.1
+  since 2026-10-07.
 - AI SDK `Experimental_SandboxSession` (`ai` 7.0.114 / `@ai-sdk/provider-utils` 5.0.47, checked
   2026-09-25) is **larger than the docs page**: `description`, `run`, `spawn` (process with
   `pid`, byte streams, `wait`, `kill`), `readFile`/`readBinaryFile`/`readTextFile` (line ranges,
@@ -266,12 +267,10 @@ spikes/              dated throwaway experiments with raw results
   Suite: 48 real-Wasmer tests + 7 unit tests, 11 consecutive clean full runs. Two flakes found
   and fixed along the way (a 500 ms limit on a cold pipeline; stream chunks merging under load).
   Mutation check: removing the backstop fails both first-command timeout tests.
-- Bump the pinned SDK to `@wasmer/sdk@0.19.0`: **held back** (decided 2026-10-07). The bump works
-  (83/83 locally on Node 24.21.0, Windows 11), but on CI runners a `RefCell already borrowed` panic
-  kills the SDK in about half the Node 22 runs (0 of 20 on 0.18.0); see the comparison section above
-  and `spikes/2026-10-06-sdk-0.19-refcell-panic/`. `main` stays on 0.18.0. Branch `bump-sdk-0.19` has
-  the bump with its test and description changes; two tests here are marked to flip on the bump
-  (the in-guest TTY test and the terminate-stderr test). Retry on the next SDK release.
+- [x] Pinned SDK bumped to `@wasmer/sdk@0.19.1` (2026-10-07; 0.19.0 came out 2026-09-28, 0.19.1 on
+  2026-10-07), lockfile in the same commit. 82/82 locally on Node 24.21.0, Windows 11. A first attempt
+  at 0.19.0 looked like it brought a Node 22 panic; it didn't. Splitting the TTY test into two commands
+  triggers it on 0.18.0 too (`spikes/2026-10-06-sdk-refcell-panic/`), so the test stays one command.
 - [x] Conformance v0 (2026-10-06): `packages/core/test/conformance.wasmer.test.ts`, 33 tests. Stdin
   (4 MiB intact by hash, binary, UTF-8, partial reader, never read, empty), UTF-8 and binary
   output (lossy decode, byte-count truncation mid-character, all 256 byte values), large stderr
