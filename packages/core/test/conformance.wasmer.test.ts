@@ -244,9 +244,10 @@ describe('conformance', () => {
     });
 
     // Same runtime lines as wasmerio/wasmer-sdk#540 (there from SIGPIPE): terminate() of a guest
-    // without a trap writes them into the command's own stderr, on Windows and Linux. Gone in
-    // @wasmer/sdk 0.19.0; on the bump, expect '' here.
-    it('writes runtime signal lines into stderr on terminate() (wasmerio/wasmer-sdk#540)', async () => {
+    // without a trap writes them into the command's own stderr. Every run on Windows 11, but not
+    // every run on the Linux runners (2 of 10 jobs in stress 37677752451 had none), so this only
+    // checks that nothing else lands there. Gone in @wasmer/sdk 0.19.0; on the bump, expect ''.
+    it('writes nothing but runtime signal lines into stderr on terminate() (wasmerio/wasmer-sdk#540)', async () => {
       const guest = await sandbox.sdk
         .shell('sleep 30')
         .spawn({ stdout: 'capture', stderr: 'capture' });
@@ -255,7 +256,7 @@ describe('conformance', () => {
       const output = await guest.wait();
 
       expect(output).toMatchObject({ exitCode: 143, reason: 'terminated' });
-      expect(output.stderr.text()).toMatch(/^Program recieved termination signal: Terminated\n/);
+      expect(output.stderr.text()).toMatch(/^(Program recieved [a-z]+ signal: [A-Za-z ]+\n)*$/);
     });
 
     // Deliberately not tested here: a guest that SIGTERMs itself (`kill -TERM $$`) exits 27, and
