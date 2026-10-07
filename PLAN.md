@@ -34,8 +34,9 @@ at least two accepted upstream issues or PRs, one maintainer review.
 
 - `@wasmer/sdk` latest is **0.18.0** (published 2026-09-24). Releases are near-daily
   (0.15 → 0.18 in three days). The SDK is self-described alpha. The hackathon pinned 0.11.0.
-  Update 2026-10-06: the repo pins **0.19.0** (published 2026-09-28, still latest). Its JS wrapper
-  (`dist/`) is byte-identical to 0.18.0; only the wasm core, its bindings and the napi snippet changed.
+  Update 2026-10-06: **0.19.0** (published 2026-09-28) is still latest. Its JS wrapper (`dist/`) is
+  byte-identical to 0.18.0; only the wasm core, its bindings and the napi snippet changed. Pinning it
+  is blocked by a Node 22 regression (M1).
 - AI SDK `Experimental_SandboxSession` (`ai` 7.0.114 / `@ai-sdk/provider-utils` 5.0.47, checked
   2026-09-25) is **larger than the docs page**: `description`, `run`, `spawn` (process with
   `pid`, byte streams, `wait`, `kill`), `readFile`/`readBinaryFile`/`readTextFile` (line ranges,
@@ -122,6 +123,8 @@ Evidence: `spikes/2026-09-25-sdk-0.18-fs/`, `spikes/2026-09-25-sdk-0.18-timeout/
   code. `sandbox.fs.writeFile` creates parent directories.
 - `wasmer/bash@1.0.25` coreutils is uutils 0.0.7 (multi-call binary): `realpath`, `base64` present;
   `uname`, `which`, `git` absent. `base64` on a directory panics (exit 27) instead of erroring.
+  Corrected 2026-10-06 (0.18.0 and 0.19.0): `uname` is present (`wasi localhost 0.0.0 0.0.0 wasm32
+  WASI`), and `base64` on a directory exits 1 with "Is a directory"; `which` and `git` are absent.
 - **Bug: the first command of a new `Wasmer` client ignores `timeoutMs` while it sleeps.** It is
   deterministic and happens per client, not per process: `sleep 3` with `timeoutMs: 500` ran 3238 ms and 3361 ms as each
   new client's first command, and ~700 ms afterwards. CPU-bound first commands are killed on time, and
@@ -184,6 +187,44 @@ imported `packages/core/dist`, which `pnpm check` happened to rebuild first. Fix
 stand, because every CI leg rebuilt `dist` from the same sources. A local `test:wasmer` run after
 editing sources without `pnpm check` could have tested stale code.
 
+## Conformance v0: SDK 0.18.0 vs 0.19.0 (2026-10-06)
+
+Local: Windows 11 10.0.26200, Node 24.21.0, warm cache, 4 full suite runs on 0.18.0 (82/82 each) and
+4 on 0.19.0 (83/83 after a wording fix in one test). CI: run 37557236811 (both OSes × Node 24.21.0
+and 22.19.0) plus the stress runs listed. 0.19.0's JS wrapper is byte-identical to 0.18.0, so every
+difference comes from the wasm core.
+
+| Behaviour | 0.18.0 | 0.19.0 |
+|---|---|---|
+| Pipes and redirects inside a guest (`echo \| [ -t 0 ]`) | report a tty | **fixed**: not a tty, so `echo ... \| python -` works |
+| The command's own stdio (wasmer#6425) | tty | still tty (host-fed `python -` still opens the REPL) |
+| SIGPIPE noise in stderr (wasmer-sdk#540), CI probe, 30 runs per shape | Windows 9–18, Linux 0–2 | **0 on all four legs** |
+| `Program recieved ...` lines in stderr after host `terminate()` (local) | 15 of 15 | **0 of 15** |
+| First-command `timeoutMs` (wasmer-sdk#539), `sleep 3` vs 500 ms | 3.1–3.3 s | 3.1–3.3 s, unchanged (Node 22 reports `exited`, Node 24 `timeout`) |
+| Allocator-lock stall after kill + close (wasmer-sdk#542), kill-close repro, Node 22.23.0, 20 jobs | 6 stalled (36331476279) | 9 stalled (37557239245), main thread spinning on `xchg` at base + `0x17a574` |
+| `RefCell already borrowed` panic, `sandbox.wasmer.test.ts` alone, Node 22.23.0 | 0 of 20 | **22 of 40 (regression)** |
+| Guest that SIGTERMs itself, 4 × 20 iterations (local) | crash or hang 8 of 8 | crash or hang 6 of 8 |
+| Child that SIGTERMs itself (`sh -c 'kill -TERM $$'`) (local) | clean 4 of 4 | **crash or hang 4 of 4 (regression)** |
+| Sync fs calls (`stat`, `readDir`, `mkdir`, `remove`) reject with a plain Error that `WasmerError.is()` misses | yes | yes (same `dist/`) |
+| Missing file has no error code of its own | yes | yes |
+| `terminate()` runs the guest's SIGTERM trap, then reports 143 instead of its status | yes | yes |
+| bash `/dev/tcp` in `host` mode connects but can't use the socket | yes | yes |
+| Suite time (local, sum of test durations) | 26.5 s | 27.4 s |
+
+New findings from writing conformance v0 (not filed; ask before filing):
+
+- **SandboxFileSystem's sync calls skip error conversion.** `stat`, `readDir`, `mkdir` and `remove` call
+  synchronous core methods inside `rethrow(this.#core.x(...))`, so they throw before `rethrow`'s
+  `try` and reject with a plain `Error` named `WasmerError`. A one-line fix upstream (`rethrow(async () => ...)`
+  or a sync wrapper). Pinned in conformance.
+- **A guest that signals itself crashes or hangs the host process** (`memory access out of bounds`,
+  `table index is out of bounds`, `unaligned accesses`, "Scheduler is dead", or a silent hang).
+  On 0.19.0 a child process doing it is enough. Likely the same class as the intermittent Windows
+  CI panics. Evidence: `spikes/2026-10-06-sdk-0.18-guest-signals/`.
+- **0.19.0's `RefCell already borrowed` regression on Node 22**: `spikes/2026-10-06-sdk-0.19-refcell-panic/`.
+- **bash `/dev/tcp`**: in `host` mode the connection reaches the host but bash can't use it. This corrects
+  the earlier "cannot tell the modes apart".
+
 ## Repository layout (target)
 
 ```
@@ -225,16 +266,31 @@ spikes/              dated throwaway experiments with raw results
   Suite: 48 real-Wasmer tests + 7 unit tests, 11 consecutive clean full runs. Two flakes found
   and fixed along the way (a 500 ms limit on a cold pipeline; stream chunks merging under load).
   Mutation check: removing the backstop fails both first-command timeout tests.
-- [x] Pinned SDK bumped to `@wasmer/sdk@0.19.0` (2026-10-06), lockfile in the same commit. Suite
-  83/83 locally on 0.19.0 (Node 24.21.0, Windows 11).
-- Conformance v0: every spike probe as a test, plus stdin, UTF-8/binary output,
-  large stderr, rapid sequential runs and close-while-running.
-- Provenance recorder (SDK version, package versions, Node, OS, cache state).
+- Bump the pinned SDK to `@wasmer/sdk@0.19.0`: done on the branch (2026-10-06, lockfile and
+  provenance in the same commit), **blocked by a 0.19.0 regression**. Suite 83/83 locally (Node
+  24.21.0, Windows 11), but on CI runners a `RefCell already borrowed` panic kills the SDK in about
+  half the Node 22 runs (0 of 20 on 0.18.0); see the comparison section above and
+  `spikes/2026-10-06-sdk-0.19-refcell-panic/`.
+- [x] Conformance v0 (2026-10-06): `packages/core/test/conformance.wasmer.test.ts`, 33 tests. Stdin
+  (4 MiB intact by hash, binary, UTF-8, partial reader, never read, empty), UTF-8 and binary
+  output (lossy decode, byte-count truncation mid-character, all 256 byte values), large stderr
+  (kept whole, truncated at 1 MiB, 3 MB on both streams at once, interleaved order), rapid sequential
+  runs (100 commands, 20 sandboxes, 5 timeouts in a row), close while running (streaming, several
+  commands, stdin still being written), and the remaining spike probes (kill and terminate exit
+  codes, SIGTERM traps, env, tool set, filesystem errors, `/dev/tcp`, #539's raw SDK deadline).
+  Known bugs are pinned to today's behaviour. Left out on purpose: a guest that signals itself, which
+  crashes or hangs the SDK (`spikes/2026-10-06-sdk-0.18-guest-signals/`).
+- [x] Provenance recorder (2026-10-06): `collectProvenance()` gives SDK version, Node, platform,
+  OS release and arch; each `WasmerSandbox.provenance` gives requested and resolved package ids
+  (dependencies such as `wasmer/coreutils@1.0.27` included), cache state (`warm`/`cold`/`partial`,
+  from the SDK's own load progress) and bytes downloaded. CI's `provenance.json` adds pnpm,
+  runner image, the CI cache hit and the resolved packages the suite pins.
 - [x] CI on GitHub Actions (2026-09-25): `.github/workflows/ci.yml`, `ubuntu-24.04` + `windows-2025`
   × Node 24.21.0 + the declared floor (22.23.0, now 22.19.0), pinned SDK, actions pinned by SHA, `./.wasmer`
   cached, results + provenance uploaded as artifacts. `sdk-latest` job (nightly + manual) reports
   instead of failing. First green run: 36189376746 (48/48 real-Wasmer tests on all four legs).
-- Version comparison: run conformance v0 against SDK 0.11.0 and 0.18.0.
+- [x] Version comparison (2026-10-06): conformance v0 on SDK 0.18.0 vs 0.19.0, in place of the
+  planned 0.11.0 vs 0.18.0 (0.11 is stale). See "Conformance v0: SDK 0.18.0 vs 0.19.0" above.
 
 ### M2: Oct 2 – 15: LangChain provider + workload #1
 - `packages/deepagents`, run against `@langchain/sandbox-standard-tests`.
