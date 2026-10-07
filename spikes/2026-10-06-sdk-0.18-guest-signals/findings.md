@@ -1,7 +1,7 @@
 # A guest that signals itself crashes or hangs the SDK
 
 Found 2026-10-06 while writing conformance v0 (`packages/core/test/conformance.wasmer.test.ts`).
-Not filed.
+Not filed. Still there in SDK 0.19.0, and wider: a child process signalling itself now fails too.
 
 ## What happens
 
@@ -22,7 +22,7 @@ These match two of the intermittent Windows CI failures in HANDOFF.md (363333721
 out of bounds; 36518385645: "Scheduler is dead"). Both happened in the SIGPIPE probe, where
 pipeline members die of a signal.
 
-## Tally (SDK 0.18.0, Node 24.21.0, Windows 11 10.0.26200, warm cache)
+## Tally: SDK 0.18.0 (Node 24.21.0, Windows 11 10.0.26200, warm cache)
 
 `node spikes/2026-10-06-sdk-0.18-guest-signals/repro.mjs <shape> 20 <scope>`, 4 processes per row,
 60 s limit per process. Raw lines: `tally-win32-sdk0.18.0.txt`; crash output: `raw-sdk0.18.0/`.
@@ -37,10 +37,33 @@ pipeline members die of a signal.
 | `yes \| head -c 1000` (sigpipe) | one sandbox | 4 | 0 | 0 | |
 | `true` (control) | one sandbox | 4 | 0 | 0 | |
 
-So it's the command's own top-level process dying of its own signal. A child that does the same
+On 0.18.0 it's the command's own top-level process dying of its own signal. A child that does the same
 (bash survives) is fine, and so are host-initiated terminate and kill. SIGPIPE was clean here, but
 this machine has never shown the SIGPIPE noise either (0/90), while the Windows runners show it in
 9–18 of 30 runs. A slower host may let SIGPIPE deaths hit the same path.
+
+## Tally: SDK 0.19.0 (same machine and settings)
+
+Raw lines: `tally-win32-sdk0.19.0.txt`; crash output: `raw-sdk0.19.0/`.
+
+| Shape | Scope | Clean | Crash | Hang | Iterations done before failing |
+|---|---|---|---|---|---|
+| `kill -TERM $$` (self-term) | one sandbox | 0 | 0 | 4 | 1, 1, 1, 1 |
+| `kill -TERM $$` (self-term) | new sandbox per iteration | 2 | 1 | 1 | 8, 1 |
+| `sh -c 'kill -TERM $$'` (child-self-term) | one sandbox | 0 | 1 | 3 | 2, 16, 11, 16 |
+| host `terminate()` of `sleep 30` | one sandbox | 4 | 0 | 0 | |
+| host `kill()` of `sleep 30` | one sandbox | 4 | 0 | 0 | |
+| `yes \| head -c 1000` (sigpipe) | one sandbox | 4 | 0 | 0 | |
+| `true` (control) | one sandbox | 4 | 0 | 0 | |
+
+New crash text on 0.19.0: `RuntimeError: operation does not support unaligned accesses`. The
+child-self-term shape went from 0/4 to 4/4 failing: on 0.19.0 a child that dies of its own signal
+is enough, even though bash and the command survive (exit 0). That's a much
+more common situation in agent workloads (test runners, `timeout`, scripts that clean up with
+`kill $$`).
+
+One thing 0.19.0 fixed: host `terminate()` no longer writes `Program recieved ...` lines into the
+guest's stderr (15/15 runs on 0.18.0, 0/15 on 0.19.0).
 
 ## Consequences here
 

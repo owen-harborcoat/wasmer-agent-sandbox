@@ -34,6 +34,8 @@ at least two accepted upstream issues or PRs, one maintainer review.
 
 - `@wasmer/sdk` latest is **0.18.0** (published 2026-09-24). Releases are near-daily
   (0.15 → 0.18 in three days). The SDK is self-described alpha. The hackathon pinned 0.11.0.
+  Update 2026-10-06: the repo pins **0.19.0** (published 2026-09-28, still latest). Its JS wrapper
+  (`dist/`) is byte-identical to 0.18.0; only the wasm core, its bindings and the napi snippet changed.
 - AI SDK `Experimental_SandboxSession` (`ai` 7.0.114 / `@ai-sdk/provider-utils` 5.0.47, checked
   2026-09-25) is **larger than the docs page**: `description`, `run`, `spawn` (process with
   `pid`, byte streams, `wait`, `kill`), `readFile`/`readBinaryFile`/`readTextFile` (line ranges,
@@ -90,8 +92,9 @@ Evidence: `spikes/2026-09-24-sdk-0.18-process/`.
 - Binary stdout keeps its bytes; `text()` decodes lossily and doesn't throw.
 - **Network policy is enforced** (Python sockets against a loopback listener owned by the probe):
   `disabled` and omitted both give `OSError [Errno 58] Not supported` and the host sees no
-  connection; `host` connects. So the SDK default is disabled. bash `/dev/tcp` cannot tell
-  the modes apart.
+  connection; `host` connects. So the SDK default is disabled. bash `/dev/tcp` says "Not
+  supported" in both modes, but (corrected 2026-10-06) in `host` mode the connection does reach
+  the host first; bash just can't use the socket. `disabled` fails at `connect`.
 - **Python needs wasm `exnref`, which Node enables by default from 22.19.0.** `python/python@=3.13.20`
   fails to start with `EXECUTION_ERROR: compile error: Validate("Unknown validation error")` on
   Node 20.20.2 and on 22.12.0–22.18.0, and works on 22.19.0–22.23.0 and 24.21.0. The results are
@@ -222,6 +225,8 @@ spikes/              dated throwaway experiments with raw results
   Suite: 48 real-Wasmer tests + 7 unit tests, 11 consecutive clean full runs. Two flakes found
   and fixed along the way (a 500 ms limit on a cold pipeline; stream chunks merging under load).
   Mutation check: removing the backstop fails both first-command timeout tests.
+- [x] Pinned SDK bumped to `@wasmer/sdk@0.19.0` (2026-10-06), lockfile in the same commit. Suite
+  83/83 locally on 0.19.0 (Node 24.21.0, Windows 11).
 - Conformance v0: every spike probe as a test, plus stdin, UTF-8/binary output,
   large stderr, rapid sequential runs and close-while-running.
 - Provenance recorder (SDK version, package versions, Node, OS, cache state).

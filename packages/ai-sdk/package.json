@@ -24,7 +24,7 @@
     "@owenota1337/wasmer-sandbox-core": "workspace:*"
   },
   "devDependencies": {
-    "@wasmer/sdk": "0.18.0",
+    "@wasmer/sdk": "0.19.0",
     "ai": "7.0.114",
     "ws": "8.21.3",
     "zod": "4.6.5"

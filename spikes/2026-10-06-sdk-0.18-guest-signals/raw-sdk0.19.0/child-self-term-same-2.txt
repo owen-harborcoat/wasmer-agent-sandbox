@@ -1,0 +1,17 @@
+{"sdk":"0.19.0","node":"24.21.0","platform":"win32","osRelease":"10.0.26200","arch":"x64","cache":"warm","shape":"child-self-term","iterations":20,"scope":"same"}
+{"i":0,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":250}
+{"i":1,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":65}
+{"i":2,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":114}
+{"i":3,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":128}
+{"i":4,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":127}
+{"i":5,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":168}
+{"i":6,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":173}
+{"i":7,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":141}
+{"i":8,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":163}
+{"i":9,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":159}
+{"i":10,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":173}
+{"i":11,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":173}
+{"i":12,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":165}
+{"i":13,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":160}
+{"i":14,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":156}
+{"i":15,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":166}

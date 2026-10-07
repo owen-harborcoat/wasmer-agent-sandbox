@@ -54,17 +54,25 @@ describe('WasmerSandbox', () => {
     expect(result.stdout.trim()).toBe('3');
   });
 
-  // Known upstream bug, pinned so this fails once it's fixed: every stdio fd reports as a terminal,
-  // even with stdin closed, output captured, or a pipe/redirect in between (wasmerio/wasmer#6425).
-  // Interpreters then treat piped scripts as interactive (`echo ... | python -` shows `>>>`).
-  it('reports stdio as a terminal even when it is not (wasmerio/wasmer#6425)', async () => {
+  // Known upstream bug, pinned so this fails once it's fixed: the command's own stdio reports as a
+  // terminal although stdin is closed and the host captures stdout and stderr (wasmerio/wasmer#6425).
+  it('reports the command’s own stdio as a terminal (wasmerio/wasmer#6425)', async () => {
     const result = await sandbox.exec(
-      'for fd in 0 1 2; do [ -t $fd ] && echo "$fd tty" || echo "$fd no"; done; ' +
-        'echo | { [ -t 0 ] && echo "pipe tty" || echo "pipe no"; }; ' +
+      'for fd in 0 1 2; do [ -t $fd ] && echo "$fd tty" || echo "$fd no"; done',
+    );
+
+    expect(result.stdout).toBe('0 tty\n1 tty\n2 tty\n');
+  });
+
+  // Fixed in @wasmer/sdk 0.19.0 (0.18.0 said tty for both), so `echo ... | python -` no longer
+  // opens the REPL.
+  it('reports pipes and redirects inside the guest as not a terminal', async () => {
+    const result = await sandbox.exec(
+      'echo | { [ -t 0 ] && echo "pipe tty" || echo "pipe no"; }; ' +
         '{ [ -t 1 ] && echo "redirect tty" || echo "redirect no"; } > out.txt; cat out.txt',
     );
 
-    expect(result.stdout).toBe('0 tty\n1 tty\n2 tty\npipe tty\nredirect tty\n');
+    expect(result.stdout).toBe('pipe no\nredirect no\n');
   });
 
   it('runs in /workspace by default, where injected files live', async () => {

@@ -1,0 +1,18 @@
+{"sdk":"0.19.0","node":"24.21.0","platform":"win32","osRelease":"10.0.26200","arch":"x64","cache":"warm","shape":"self-term","iterations":20,"scope":"sandbox"}
+{"i":0,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":194}
+wasm://wasm/0126abd6:1
+
+
+RuntimeError: operation does not support unaligned accesses
+    at wasm://wasm/0126abd6:wasm-function[563]:0x1898eb
+    at wasm://wasm/0126abd6:wasm-function[399]:0xd22c5
+    at wasm://wasm/0126abd6:wasm-function[1924]:0x312af0
+    at wasm://wasm/0126abd6:wasm-function[543]:0x17a7e5
+    at wasm://wasm/0126abd6:wasm-function[3667]:0x3bbec2
+    at wasm://wasm/0126abd6:wasm-function[632]:0x1b37a3
+    at wasm://wasm/0126abd6:wasm-function[342]:0x30852
+    at wasm://wasm/0126abd6:wasm-function[446]:0x11a26f
+    at wasm://wasm/0126abd6:wasm-function[1980]:0x321e7a
+    at wasm://wasm/0126abd6:wasm-function[2843]:0x38a0ab
+
+Node.js v24.21.0

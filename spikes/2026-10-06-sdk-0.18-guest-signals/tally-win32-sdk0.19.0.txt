@@ -1,0 +1,28 @@
+self-term same run=1 outcome=hang completed_iterations=1
+self-term same run=2 outcome=hang completed_iterations=1
+self-term same run=3 outcome=hang completed_iterations=1
+self-term same run=4 outcome=hang completed_iterations=1
+self-term sandbox run=1 outcome=hang completed_iterations=8
+self-term sandbox run=2 outcome=done completed_iterations=20
+self-term sandbox run=3 outcome=crash(RuntimeError: operatio) completed_iterations=1
+self-term sandbox run=4 outcome=done completed_iterations=20
+child-self-term same run=1 outcome=crash(RuntimeError]: memory access out of bou) completed_iterations=2
+child-self-term same run=2 outcome=hang completed_iterations=16
+child-self-term same run=3 outcome=hang completed_iterations=11
+child-self-term same run=4 outcome=hang completed_iterations=16
+host-terminate same run=1 outcome=done completed_iterations=20
+host-terminate same run=2 outcome=done completed_iterations=20
+host-terminate same run=3 outcome=done completed_iterations=20
+host-terminate same run=4 outcome=done completed_iterations=20
+host-kill same run=1 outcome=done completed_iterations=20
+host-kill same run=2 outcome=done completed_iterations=20
+host-kill same run=3 outcome=done completed_iterations=20
+host-kill same run=4 outcome=done completed_iterations=20
+sigpipe same run=1 outcome=done completed_iterations=20
+sigpipe same run=2 outcome=done completed_iterations=20
+sigpipe same run=3 outcome=done completed_iterations=20
+sigpipe same run=4 outcome=done completed_iterations=20
+control same run=1 outcome=done completed_iterations=20
+control same run=2 outcome=done completed_iterations=20
+control same run=3 outcome=done completed_iterations=20
+control same run=4 outcome=done completed_iterations=20

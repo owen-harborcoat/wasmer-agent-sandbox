@@ -243,9 +243,10 @@ describe('conformance', () => {
       expect(output).toMatchObject({ exitCode: 143, reason: 'terminated' });
     });
 
-    // Same runtime lines as wasmerio/wasmer-sdk#540 (there from SIGPIPE): terminate() of a guest
-    // without a trap writes them into the command's own stderr. Every run on Windows 11 so far.
-    it('writes runtime signal lines into stderr on terminate() (wasmerio/wasmer-sdk#540)', async () => {
+    // @wasmer/sdk 0.18.0 wrote the runtime lines from wasmerio/wasmer-sdk#540 (`Program recieved
+    // termination signal`, then `fatal signal: Aborted` ×30) into the stderr of every terminated
+    // guest on Windows 11. 0.19.0 doesn't. #540 itself (SIGPIPE) is checked on the Linux runners.
+    it('keeps runtime signal lines out of a terminated guest’s stderr', async () => {
       const guest = await sandbox.sdk
         .shell('sleep 30')
         .spawn({ stdout: 'capture', stderr: 'capture' });
@@ -254,12 +255,13 @@ describe('conformance', () => {
       const output = await guest.wait();
 
       expect(output).toMatchObject({ exitCode: 143, reason: 'terminated' });
-      expect(output.stderr.text()).toMatch(/^Program recieved termination signal: Terminated\n/);
+      expect(output.stderr.text()).toBe('');
     });
 
     // Deliberately not tested here: a guest that SIGTERMs itself (`kill -TERM $$`) exits 27, and
     // within a few repeats the SDK crashes the host process or hangs it, which would take the whole
-    // suite down. See spikes/2026-10-06-sdk-0.18-guest-signals.
+    // suite down. On 0.19.0 a child that does it (`sh -c 'kill -TERM $$'`) is enough. See
+    // spikes/2026-10-06-sdk-0.18-guest-signals.
 
     it('leaves USER unset and puts the working directory on PATH', async () => {
       const result = await sandbox.exec('printenv USER || echo unset; echo "$PATH"');

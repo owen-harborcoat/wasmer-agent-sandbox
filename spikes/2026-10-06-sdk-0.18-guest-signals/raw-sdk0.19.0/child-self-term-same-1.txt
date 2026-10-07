@@ -1,0 +1,41 @@
+{"sdk":"0.19.0","node":"24.21.0","platform":"win32","osRelease":"10.0.26200","arch":"x64","cache":"warm","shape":"child-self-term","iterations":20,"scope":"same"}
+{"i":0,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":253}
+{"i":1,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":69}
+Wasmer SDK worker error: Error [RuntimeError]: memory access out of bounds
+    at wasm://wasm/0126abd6:wasm-function[442]:0x115f09
+    at wasm://wasm/0126abd6:wasm-function[362]:0x7af2a
+    at wasm://wasm/0126abd6:wasm-function[540]:0x1789a8
+    at wasm://wasm/0126abd6:wasm-function[466]:0x13705f
+    at wasm://wasm/0126abd6:wasm-function[905]:0x241fb9
+    at wasm://wasm/0126abd6:wasm-function[1980]:0x321e7a
+    at wasm://wasm/0126abd6:wasm-function[2843]:0x38a0ab
+    at wasm://wasm/0126abd6:wasm-function[4848]:0x3dfb7a
+    at wasm://wasm/0126abd6:wasm-function[6233]:0x3f444c
+    at wasm_bindgen_d63e695e2f2d7f2a___convert__closures_____invoke___wasm_bindgen_d63e695e2f2d7f2a___JsValue__core_758a65ee8548104___result__Result_____wasm_bindgen_d63e695e2f2d7f2a___JsError___true_ (node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:2621:22)
+    at real (node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:2887:20)
+node_modules/@wasmer/sdk/dist/index.js:79
+            return new WasmerError(error.message, code, {
+                   ^
+
+WasmerError: command execution failed: unable to spawn the command: Initialization function failed - the thread pool is shut down: Scheduler is dead
+    at toWasmerError (node_modules/@wasmer/sdk/dist/index.js:79:20)
+    at rethrow (node_modules/@wasmer/sdk/dist/index.js:62:15)
+    at async Command.run (node_modules/@wasmer/sdk/dist/index.js:857:40)
+    at async spikes/2026-10-06-sdk-0.18-guest-signals/repro.mjs:53:20 {
+  code: 'EXECUTION_ERROR',
+  [cause]: Error [WasmerError]: command execution failed: unable to spawn the command: Initialization function failed - the thread pool is shut down: Scheduler is dead
+      at __wbg_new_b667d279fd5aa943 (node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:1998:25)
+      at wasm://wasm/0126abd6:wasm-function[6920]:0x3fd19d
+      at wasm://wasm/0126abd6:wasm-function[3721]:0x3be351
+      at wasm://wasm/0126abd6:wasm-function[2117]:0x3339c1
+      at wasm://wasm/0126abd6:wasm-function[446]:0x11ac62
+      at wasm://wasm/0126abd6:wasm-function[1980]:0x321e7a
+      at wasm://wasm/0126abd6:wasm-function[2843]:0x38a0ab
+      at wasm://wasm/0126abd6:wasm-function[4848]:0x3dfb7a
+      at wasm://wasm/0126abd6:wasm-function[6233]:0x3f444c
+      at wasm_bindgen_d63e695e2f2d7f2a___convert__closures_____invoke___wasm_bindgen_d63e695e2f2d7f2a___JsValue__core_758a65ee8548104___result__Result_____wasm_bindgen_d63e695e2f2d7f2a___JsError___true_ (node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:2621:22) {
+    code: 'EXECUTION_ERROR'
+  }
+}
+
+Node.js v24.21.0
