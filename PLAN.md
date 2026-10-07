@@ -188,41 +188,44 @@ imported `packages/core/dist`, which `pnpm check` happened to rebuild first. Fix
 stand, because every CI leg rebuilt `dist` from the same sources. A local `test:wasmer` run after
 editing sources without `pnpm check` could have tested stale code.
 
-## Conformance v0: SDK 0.18.0 vs 0.19.0 (2026-10-06)
+## Conformance v0: SDK 0.18.0 vs 0.19.0 vs 0.19.1 (2026-10-06/07)
 
-Local: Windows 11 10.0.26200, Node 24.21.0, warm cache, 4 full suite runs on 0.18.0 (82/82 each) and
-4 on 0.19.0 (83/83 after a wording fix in one test). CI: run 37557236811 (both OSes × Node 24.21.0
-and 22.19.0) plus the stress runs listed. 0.19.0's JS wrapper is byte-identical to 0.18.0, so every
-difference comes from the wasm core.
+Local: Windows 11 10.0.26200, Node 24.21.0, warm cache; full suite clean on every version (82–83 tests,
+several runs each). CI: runs 37557236811 (0.19.0) and 37680060672 (0.19.1), both OSes × Node 24.21.0
+and 22.19.0, plus the stress runs listed. 0.19.0's JS wrapper is byte-identical to 0.18.0, so those
+differences come from the wasm core; 0.19.1 changes timer cancellation and callback lifetimes in the
+bindings.
 
-| Behaviour | 0.18.0 | 0.19.0 |
-|---|---|---|
-| Pipes and redirects inside a guest (`echo \| [ -t 0 ]`) | report a tty | **fixed**: not a tty, so `echo ... \| python -` works |
-| The command's own stdio (wasmer#6425) | tty | still tty (host-fed `python -` still opens the REPL) |
-| SIGPIPE noise in stderr (wasmer-sdk#540), CI probe, 30 runs per shape | Windows 9–18, Linux 0–2 | **0 on all four legs** |
-| `Program recieved ...` lines in stderr after host `terminate()` (local) | 15 of 15 | **0 of 15** |
-| First-command `timeoutMs` (wasmer-sdk#539), `sleep 3` vs 500 ms | 3.1–3.3 s | 3.1–3.3 s, unchanged (Node 22 reports `exited`, Node 24 `timeout`) |
-| Allocator-lock stall after kill + close (wasmer-sdk#542), kill-close repro, Node 22.23.0, 20 jobs | 6 stalled (36331476279) | 9 stalled (37557239245), main thread spinning on `xchg` at base + `0x17a574` |
-| `RefCell already borrowed` panic, `sandbox.wasmer.test.ts` alone, Node 22.23.0 | 0 of 20 | **22 of 40 (regression)** |
-| Guest that SIGTERMs itself, 4 × 20 iterations (local) | crash or hang 8 of 8 | crash or hang 6 of 8 |
-| Child that SIGTERMs itself (`sh -c 'kill -TERM $$'`) (local) | clean 4 of 4 | **crash or hang 4 of 4 (regression)** |
-| Sync fs calls (`stat`, `readDir`, `mkdir`, `remove`) reject with a plain Error that `WasmerError.is()` misses | yes | yes (same `dist/`) |
-| Missing file has no error code of its own | yes | yes |
-| `terminate()` runs the guest's SIGTERM trap, then reports 143 instead of its status | yes | yes |
-| bash `/dev/tcp` in `host` mode connects but can't use the socket | yes | yes |
-| Suite time (local, sum of test durations) | 26.5 s | 27.4 s |
+| Behaviour | 0.18.0 | 0.19.0 | 0.19.1 |
+|---|---|---|---|
+| Pipes and redirects inside a guest report a tty (wasmer#6425's own repro too) | yes | **no (fixed)** | no |
+| The command's own stdio reports a tty (host-fed `python -` opens the REPL) | yes | yes | yes |
+| SIGPIPE noise in stderr (wasmer-sdk#540), CI probe, noisy runs of 30 per shape | Windows 9–18, Linux 0–2 | **0 on all legs** | 0 on all legs |
+| `Program recieved ...` lines in stderr after host `terminate()` | every run on Windows, most on Linux | **none** | none |
+| First-command `timeoutMs` (wasmer-sdk#539), `sleep 3` vs 500 ms | 3.1–3.3 s | 3.1–3.3 s | 3.1–3.4 s |
+| Allocator-lock stall (wasmer-sdk#542), kill-close repro, Node 22.23.0, stalled of 20 | 6 (36331476279) | 9 (37557239245) | 4 (37680065612) |
+| Full-suite stress, 20 jobs each on Node 22.23.0 and 24.21.0 | 1 stall of 40 (36333372198, older suite) | not run with the final tests | 1 stall of 40 (37680056447) |
+| `RefCell already borrowed` panic, core test file alone, Node 22.23.0, TTY test as one command / split in two | 0 of 20 / 11 of 20 | – / 22 of 40 | 0 of 20 / 15 of 20 |
+| Guest that SIGTERMs itself, crash or hang of 4 × 20 iterations (local) | 8 of 8 | 6 of 8 | 3 of 4 |
+| Child that SIGTERMs itself (`sh -c 'kill -TERM $$'`), same (local) | 0 of 4 | **4 of 4 (regression)** | 4 of 4 |
+| Sync fs calls reject with a plain Error that `WasmerError.is()` misses | yes | yes | yes (fix: wasmer-sdk#554) |
+| Missing file has no error code of its own | yes | yes | yes |
+| `terminate()` runs the guest's SIGTERM trap, then reports 143, not its status | yes | yes | yes |
+| bash `/dev/tcp` in `host` mode connects but can't use the socket | yes | yes | yes |
 
-New findings from writing conformance v0 (not filed; ask before filing):
+New findings from writing conformance v0:
 
 - **SandboxFileSystem's sync calls skip error conversion.** `stat`, `readDir`, `mkdir` and `remove` call
-  synchronous core methods inside `rethrow(this.#core.x(...))`, so they throw before `rethrow`'s
-  `try` and reject with a plain `Error` named `WasmerError`. A one-line fix upstream (`rethrow(async () => ...)`
-  or a sync wrapper). Pinned in conformance.
+  synchronous core methods inside `rethrow(this.#core.x(...))`, so they throw before `rethrow`'s `try`
+  and reject with a plain `Error` named `WasmerError`. Fixed by using `rethrowSync`:
+  wasmerio/wasmer-sdk#554 (opened 2026-10-07). Pinned in conformance.
 - **A guest that signals itself crashes or hangs the host process** (`memory access out of bounds`,
   `table index is out of bounds`, `unaligned accesses`, "Scheduler is dead", or a silent hang).
-  On 0.19.0 a child process doing it is enough. Likely the same class as the intermittent Windows
-  CI panics. Evidence: `spikes/2026-10-06-sdk-0.18-guest-signals/`.
-- **0.19.0's `RefCell already borrowed` regression on Node 22**: `spikes/2026-10-06-sdk-0.19-refcell-panic/`.
+  From 0.19.0 a child process doing it is enough. Likely the same class as the intermittent Windows
+  CI panics. Not filed. Evidence: `spikes/2026-10-06-sdk-0.18-guest-signals/`.
+- **`RefCell already borrowed` panic** set off by the order of short commands in a test file, on every
+  version, mostly on Node 22. First blamed on 0.19.0, wrongly: the TTY test had been split in the same
+  commit. Not filed until there's a minimal repro. `spikes/2026-10-06-sdk-refcell-panic/`.
 - **bash `/dev/tcp`**: in `host` mode the connection reaches the host but bash can't use it. This corrects
   the earlier "cannot tell the modes apart".
 
@@ -289,8 +292,8 @@ spikes/              dated throwaway experiments with raw results
   × Node 24.21.0 + the declared floor (22.23.0, now 22.19.0), pinned SDK, actions pinned by SHA, `./.wasmer`
   cached, results + provenance uploaded as artifacts. `sdk-latest` job (nightly + manual) reports
   instead of failing. First green run: 36189376746 (48/48 real-Wasmer tests on all four legs).
-- [x] Version comparison (2026-10-06): conformance v0 on SDK 0.18.0 vs 0.19.0, in place of the
-  planned 0.11.0 vs 0.18.0 (0.11 is stale). See "Conformance v0: SDK 0.18.0 vs 0.19.0" above.
+- [x] Version comparison (2026-10-07): conformance v0 on SDK 0.18.0, 0.19.0 and 0.19.1, in place of the
+  planned 0.11.0 vs 0.18.0 (0.11 is stale). See "Conformance v0: SDK 0.18.0 vs 0.19.0 vs 0.19.1" above.
 
 ### M2: Oct 2 – 15: LangChain provider + workload #1
 - `packages/deepagents`, run against `@langchain/sandbox-standard-tests`.

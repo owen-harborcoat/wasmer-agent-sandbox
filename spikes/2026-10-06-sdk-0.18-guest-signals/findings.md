@@ -62,6 +62,10 @@ is enough, even though bash and the command survive (exit 0). That's a much
 more common situation in agent workloads (test runners, `timeout`, scripts that clean up with
 `kill $$`).
 
+0.19.1 (2026-10-07, `tally-win32-sdk0.19.1.txt`, 4 runs per shape): self-term 3 of 4 failed (all hangs),
+child-self-term 4 of 4 failed (3 × `unaligned accesses`, 1 hang), host `terminate()` and the control clean.
+No change.
+
 One thing 0.19.0 fixed: host `terminate()` no longer writes `Program recieved ...` lines into the
 guest's stderr (15/15 runs on 0.18.0, 0/15 on 0.19.0).
 

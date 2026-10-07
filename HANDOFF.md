@@ -1,6 +1,6 @@
 # Handoff
 
-State as of 2026-10-06 (evening), for the next working session. Read this, then [CLAUDE.md](CLAUDE.md)
+State as of 2026-10-07, for the next working session. Read this, then [CLAUDE.md](CLAUDE.md)
 (working rules), then [PLAN.md](PLAN.md) (decisions, verified facts, milestones).
 
 Repo: https://github.com/owen-harborcoat/wasmer-agent-sandbox (public, `main`). The local
@@ -19,58 +19,53 @@ Target ~2026-11-07 (see PLAN.md for the four milestones).
 - **Working:** `packages/core` (`WasmerSandbox`), `packages/ai-sdk` (AI SDK `HarnessV1SandboxProvider`),
   and `examples/agent-demo`, which runs a live Fireworks model (Kimi K3) end to end: right in 4 of 4
   runs, ~30 s each.
-- **M1 work is on branch `claude/upbeat-germain-799099`, not on `main`** (pushed; `main` untouched).
-  It adds conformance v0 (33 tests in `packages/core/test/conformance.wasmer.test.ts`), the
-  provenance recorder (resolved packages incl. dependencies, cache state, OS release), and the bump to
-  `@wasmer/sdk` 0.19.0. 83 real-Wasmer tests + 9 unit tests. Locally 83/83 on 0.19.0 four times.
-- **The 0.19.0 bump is blocked by a regression**: a `RefCell already borrowed` panic
-  (`wasix/src/state/handles/thread_local.rs:126`) kills the SDK in about half of the Node 22 runs on CI
-  (22 of 40 stress jobs of `sandbox.wasmer.test.ts`; 0 of 20 on 0.18.0). Node 24 rarely hits it. Our floor
-  is Node 22.19, so merging the branch as is would make CI fail about half the time. Evidence:
-  `spikes/2026-10-06-sdk-0.19-refcell-panic/findings.md`. **Ask the user how to land it** (next steps, item 1).
+- **M1 is done and on `main`** (2026-10-07): conformance v0 (33 tests in
+  `packages/core/test/conformance.wasmer.test.ts`), the provenance recorder (resolved packages incl.
+  dependencies, cache state, OS release), and `@wasmer/sdk` **0.19.1**. 82 real-Wasmer tests + 9 unit
+  tests. Before merging: suite stress 39 of 40 clean (1 #542-shape stall, same as the 0.18.0 baseline),
+  CI green on all four legs. Comparison of 0.18.0 / 0.19.0 / 0.19.1 in PLAN.md.
+- **Correction worth remembering:** on 2026-10-06 a `RefCell already borrowed` panic looked like a 0.19.0
+  regression. It wasn't: splitting the TTY test into two commands set it off, on 0.18.0 too (A/B in
+  `spikes/2026-10-06-sdk-refcell-panic/`). The TTY test stays one command. Change one thing per stress run.
 - **Waiting on Wasmer** (asked 2026-10-06): which agent framework they'd want an adapter for first, and how the
   local SDK and StackMachine fit together. M2's framework order and M3's hosting depend on the answer.
-- **M1 is done apart from landing it**: conformance v0, provenance and the 0.18.0 vs 0.19.0 comparison
-  (PLAN.md, "Conformance v0: SDK 0.18.0 vs 0.19.0") are checked off. Only the bump is open.
 
 ## Upstream tracker
 
 Check these for replies first thing. Match the repo's tone in any reply: short first-person prose, a
 repro and raw output, no templated sections (see the saved memory on public tone).
 
-| Where | What | Status 2026-10-06 |
+| Where | What | Status 2026-10-07 |
 |---|---|---|
-| wasmerio/wasmer-sdk#539 | `timeoutMs` fires late while the guest sleeps | open, no reply. Still broken on 0.19.0 (all four CI legs, 3.1–3.3 s for a 500 ms limit) |
-| wasmerio/wasmer-sdk#540 | SIGPIPE leaves noise in stderr | open, no reply. **Looks fixed in 0.19.0**: 0 of 30 per shape on all four CI legs (37557236811); was 9–18 on Windows. Worth a short comment (ask first) |
-| wasmerio/wasmer-sdk#541 | Python guests need exnref (Node ≥ 22.19), `engines` says `>=20` | open, no reply. `engines` unchanged in 0.19.0 |
-| wasmerio/wasmer-sdk#542 | `kill()` can terminate a worker holding the allocator lock; process hangs | open, no reply. Still there on 0.19.0: 9 of 20 kill-close jobs stalled on Node 22.23.0 (37557239245; 0.18.0: 6 of 20), same `xchg` spin, now at base + `0x17a574` |
+| wasmerio/wasmer-sdk#539 | `timeoutMs` fires late while the guest sleeps | open, no reply. Still broken on 0.19.1 (all four CI legs, 3.1–3.4 s for a 500 ms limit) |
+| wasmerio/wasmer-sdk#540 | SIGPIPE leaves noise in stderr | open. Fixed in 0.19.x (0 of 30 per shape on all legs). **We commented 2026-10-07** with the numbers and said it's fine to close |
+| wasmerio/wasmer-sdk#541 | Python guests need exnref (Node ≥ 22.19), `engines` says `>=20` | open, no reply. `engines` unchanged in 0.19.x |
+| wasmerio/wasmer-sdk#542 | `kill()` can terminate a worker holding the allocator lock; process hangs | open, no reply. Still there: kill-close stalls of 20 on Node 22.23.0 were 6 (0.18.0), 9 (0.19.0), 4 (0.19.1) |
+| wasmerio/wasmer-sdk#554 | **Our PR** (2026-10-07): sync fs calls (`stat`, `readDir`, `mkdir`, `remove`) return a plain Error that `WasmerError.is()` misses; switch them to `rethrowSync` | open. Verified against the published 0.19.1 `dist` (couldn't build the wasm locally). When it ships, flip the pinned conformance test |
+| wasmerio/wasmer#6425 | guest stdio reports as a TTY (not ours) | open. **We commented 2026-10-07**: the issue's own repro is fixed in 0.19.0; the command's own stdio under the JS SDK host still says tty |
 | nodejs/node#66366 | Node 24 V8 CHECK/SIGSEGV, fixed upstream in V8 `9b8ca54d5a`, missing from 24.x | open. Contributor ThatKJ took it |
 | nodejs/node#66376 | ThatKJ's backport PR (V8 `68210d500a` + `9b8ca54d5a`) | open, CI green, no review yet. Our test result is posted there |
-| wasmerio/wasmer#6425 | guest stdio reports as a TTY (not ours, pre-existing) | open. We haven't commented yet (next steps, item 2) |
 
 The evidence for #542 and the Node crash, with run ids, is in
 `spikes/2026-09-27-sdk-0.18-worker-init-hang/findings.md`. `upstream-drafts/` (local only, excluded via
 `.git/info/exclude`) holds the filed drafts 01–03 and 06–07, plus unfiled `04` (missing-file error code)
 and `05` (docs on per-command overlays).
 
-## New SDK findings from 2026-10-06 (not filed; ask before filing)
+## Unfiled SDK findings (2026-10-06/07)
 
 All in PLAN.md's comparison section, with evidence in `spikes/`:
 
-- **0.19.0 `RefCell already borrowed` panic on Node 22** (above). Narrowing so far: not caused by our
-  `onProgress` observer (9/20 without it), not by the conformance file (vitest isolates files), and no
-  single test triggers it (the TTY tests plus neighbours were clean 80/80). It follows the TTY tests or the
-  abort (`terminate()`) test. `spikes/2026-10-06-sdk-0.19-refcell-panic/`.
 - **A guest that SIGTERMs itself crashes or hangs the host process** (`memory access out of bounds`, `table
   index is out of bounds`, `unaligned accesses`, "Scheduler is dead", or a silent hang). 0.18.0: the
-  command's own process doing it (8 of 8 runs); 0.19.0: a child doing it is enough too (4 of 4). Host
-  `terminate()`/`kill()` and SIGPIPE were clean. Kept out of the suite. Repro and tallies:
+  command's own process doing it; from 0.19.0 a child doing it is enough too (4 of 4 on 0.19.0 and
+  0.19.1). Host `terminate()`/`kill()` and SIGPIPE were clean. Kept out of the suite. Repro and tallies:
   `spikes/2026-10-06-sdk-0.18-guest-signals/`. Probably the same class as the Windows panics below.
-- **`SandboxFileSystem.stat/readDir/mkdir/remove` reject with a plain `Error`** that `WasmerError.is()`
-  rejects: the core calls are sync, so they throw before `rethrow()`'s `try`. Same in 0.19.0 (identical
-  `dist/`). Small, clean upstream PR candidate. Pinned in conformance.
+  The strongest candidate for the next issue: the repro is short and deterministic on Windows.
+- **`RefCell already borrowed` panic** at `wasix/src/state/handles/thread_local.rs:126`, set off by the
+  order of short commands in `sandbox.wasmer.test.ts`, mostly on Node 22, on every SDK version. Needs a
+  minimal repro before filing. `spikes/2026-10-06-sdk-refcell-panic/`.
 - `terminate()` runs a guest's SIGTERM trap but reports 143 rather than the trap's exit status. bash
-  `/dev/tcp` in host mode does reach the host but can't use the socket. Both pinned.
+  `/dev/tcp` in host mode does reach the host but can't use the socket. Both pinned in conformance.
 
 ## Known problems in the SDK we work around
 
@@ -79,11 +74,11 @@ All in PLAN.md's comparison section, with evidence in `spikes/`:
   (1 in 40 stress jobs) but doesn't prevent them. It's a workaround: remove it when #542 is fixed.
   A client only helps if it has live instances, which keep V8's shared import wrappers alive. Details in
   findings.md.
-- **Guest stdio reports as a TTY** (wasmer#6425). On 0.19.0 pipes and redirects *inside* the guest
+- **Guest stdio reports as a TTY** (wasmer#6425). Since 0.19.0 pipes and redirects *inside* the guest
   report correctly (`echo ... | python -` works), but the command's own stdio still says tty, and host-fed
-  stdin to `python -` still opens the REPL. On the branch the test is split: the top-level case is pinned,
-  the in-guest case is a regression test. `session.description` now says programs may print prompts or
-  colour codes, and to run scripts from a file or with `-c`.
+  stdin to `python -` still opens the REPL. One test in `sandbox.wasmer.test.ts` pins both halves (keep it
+  one command; see the panic above). `session.description` says programs may print prompts or colour
+  codes, and to run scripts from a file or with `-c`.
 - **Intermittent Windows SDK panics** (3 of 15 CI runs up to 2026-09-29, each passed on rerun): `RefCell
   already borrowed` at `wasix/src/state/handles/thread_local.rs:126` (36331465337, hung the suite),
   `RuntimeError: memory access out of bounds` (36333372121), and `RefCell already borrowed` at
@@ -130,30 +125,23 @@ since `gh run view --log` returns nothing until the whole run finishes.
 
 ## Next steps, in order
 
-0. **Check the upstream tracker for replies.** If Wasmer answers the framework question, it reorders
-   M2. If a maintainer picks an option on #541, send that small PR first. Also check
-   `npm view @wasmer/sdk version`: a 0.20 may fix the panic.
-1. **Land M1 (ask the user which way).** The old "finish M1" item is done on the branch. Options:
-   (a) merge it as is and accept failing Node 22 legs until upstream fixes the panic; (b) land
-   everything except the bump on `main` at 0.18.0 (the TTY test and the terminate-stderr test then go
-   back to their 0.18.0 form, since both assert 0.19.0 behaviour); (c) wait for the next SDK release and
-   rerun the stress arms. On any candidate, rerun
-   `gh workflow run stress.yml --ref <branch> -f node='["22.23.0"]' -f attempts='[1,…,20]' -f vitest_args='packages/core/test/sandbox.wasmer.test.ts'`.
-   The 0.18.0 baseline is 0 of 20 panics.
-2. **After-launch upstream items** (the Oct 5 launch has passed). **Ask the user before posting or filing
-   any of these:**
-   - Comment on wasmerio/wasmer#6425: the top-level SDK command case vs the in-guest pipe case, before and
-     after 0.19.0, with a short repro.
-   - File drafts `04` and `05` (re-check both on the SDK version in use first).
-   - Ask before filing the new 2026-10-06 findings above (0.19.0 panic, self-signal crash, fs error class).
-     The fs one comes with an obvious one-line fix, so it may be the best first PR.
-   - Safe to do without asking: a CI repro loop for the Windows panics. The guest-signal repro
-     (`spikes/2026-10-06-sdk-0.18-guest-signals/repro.mjs`) is the best lead; a `stress.yml` mode running it
-     on `windows-2025` and `ubuntu-24.04` would show whether the self-signal crash is what CI has been hitting.
-3. **M2, gated on Wasmer's framework answer.** By default: `packages/deepagents` (LangChain deepagentsjs)
+0. **Check the upstream tracker for replies**, especially #554 (our PR) and the two comments. If Wasmer
+   answers the framework question, it reorders M2. If a maintainer picks an option on #541, send that
+   small PR first. Check `npm view @wasmer/sdk version`; on a new release, rerun the suite stress, the
+   kill-close repro and the guest-signal tally, and update the comparison in PLAN.md.
+1. **Upstream items. Ask the user before filing new issues** (comments on threads we're already in were
+   fine on 2026-10-07):
+   - The guest self-signal crash (above) as a wasmer-sdk issue, with the tally and repro.
+   - A minimal repro for the `RefCell` panic, then file it. Start from the first ~6 tests of
+     `sandbox.wasmer.test.ts` with the TTY test split, as a plain script in a loop on Node 22.
+   - File drafts `04` and `05` (re-check both on 0.19.1 first).
+   - Safe to do without asking: a `stress.yml` mode that runs
+     `spikes/2026-10-06-sdk-0.18-guest-signals/repro.mjs` on `windows-2025` and `ubuntu-24.04`, to see
+     whether the self-signal crash is what the intermittent Windows CI panics have been.
+2. **M2, gated on Wasmer's framework answer.** By default: `packages/deepagents` (LangChain deepagentsjs)
    against `@langchain/sandbox-standard-tests`, and the MCP Sentinel fixture as workload #1. If there's no
    answer by ~2026-10-13, start the LangChain provider anyway.
-4. **M3 hosting is undecided.** The plan says a results dashboard on Wasmer Edge. Wasmer launched
+3. **M3 hosting is undecided.** The plan says a results dashboard on Wasmer Edge. Wasmer launched
    StackMachine on 2026-10-05 (stackmachine.com; SDKs at github.com/stackmachine/sdks): a hosted
    platform for agents to deploy apps, volumes, Postgres/MySQL/SQLite, email, cron and usage metrics, all
    through one GraphQL API. **It has no "run a command in a sandbox" API.** The user recalls Wasmer saying
@@ -167,15 +155,14 @@ since `gh run view --log` returns nothing until the whole run finishes.
   SDK harness docs ask for it to be outside. Only `/workspace` persists, so moving it out loses state.
 - The npm scope is `@owenota1337/*` but the GitHub owner is `owen-harborcoat`. Settle this before
   publishing (packages are `private: true` for now).
-- M3 hosting: Wasmer Edge or StackMachine (see next steps, item 4).
+- M3 hosting: Wasmer Edge or StackMachine (see next steps, item 3).
 
-## Remote branches made on 2026-10-06
+## Branches
 
-- `claude/upbeat-germain-799099`: the M1 work (above).
-- `claude/upbeat-germain-799099-sdk018-control`: commit `4752b5b` (0.18.0 + conformance), used for the control
-  stress runs. Keep until the comparison isn't needed.
-- `claude/upbeat-germain-799099-exp-no-onprogress`: an experiment (no `onProgress` observer). Not for `main`;
-  delete when done.
+`claude/upbeat-germain-799099` was merged into `main` on 2026-10-07. The experiment branches from the
+panic investigation (`…-sdk018-control`, `…-exp-no-onprogress`, `bump-sdk-0.19`, `exp-019-combined-tty`)
+are deleted; their stress runs keep the logs. The fork `owen-harborcoat/wasmer-sdk` holds the #554 branch
+`fix/fs-sync-errors`.
 
 ## Gotchas learned the hard way
 
@@ -183,6 +170,7 @@ since `gh run view --log` returns nothing until the whole run finishes.
 - bash `/dev/tcp` says "Not supported" in every network mode, but in host mode the connection does reach
   the host first. Test networking with Python sockets. A test listener needs a socket `error` handler,
   or a guest-side reset becomes an unhandled `ECONNRESET` (stress run 37558335759).
+- Change one thing per stress run. A test change that landed with an SDK bump once got blamed on the SDK.
 - Don't run a guest that signals itself (`kill $$`, `kill -TERM $$`) in the suite: it crashes or hangs
   the whole vitest worker, and the test timeout doesn't fire.
 - Vitest runs each test file in a fresh worker (`isolate: true`), so SDK state can't leak between files.
