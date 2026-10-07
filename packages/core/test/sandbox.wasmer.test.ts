@@ -267,7 +267,14 @@ describe('WasmerSandbox', () => {
       exited = true;
     });
     const reader = spawned.stdout.getReader();
-    const first = await reader.read();
+    // Chunk boundaries aren't guaranteed (a CI run once got '1' and '\n' apart), so read to the
+    // end of the first line.
+    let first = '';
+    while (!first.includes('\n')) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      first += new TextDecoder().decode(chunk.value);
+    }
     const firstArrivedWhileRunning = !exited;
     const [rest, stderr, exit] = await Promise.all([
       (async () => {
@@ -282,7 +289,7 @@ describe('WasmerSandbox', () => {
       spawned.wait(),
     ]);
 
-    expect(new TextDecoder().decode(first.value)).toBe('1\n');
+    expect(first).toBe('1\n');
     expect(firstArrivedWhileRunning).toBe(true);
     expect(rest).toBe('2\n3\n');
     expect(stderr).toBe('e\n');
