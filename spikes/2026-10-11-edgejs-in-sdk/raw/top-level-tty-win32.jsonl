@@ -1,0 +1,6 @@
+{"sdk":"0.19.1","node":"24.21.0","platform":"win32","osRelease":"10.0.26200","arch":"x64","cache":"warm"}
+{"name":"bash [ -t ] on 0 1 2","exit":0,"stdout":"0 tty\n1 tty\n2 tty","stderr":""}
+{"name":"python isatty()","exit":0,"stdout":"[True, True, True]","stderr":""}
+{"name":"python - with host stdin","exit":0,"stdout":">>> 42\n>>>","stderr":"Python 3.13.15 (main, Aug  5 2026, 12:25:43) [Clang 21.1.2 ] on wasix\nType \"help\", \"copyright\", \"credits\" or \"license\" for more information.\nwarning: can't use pyrepl: setupterm: could not find terminfo database"}
+{"name":"python fstat modes","exit":0,"stdout":"['0o20000', '0o20000', '0o20000']","stderr":""}
+{"name":"edge process.stdout","exit":0,"stdout":"{\"isTTY\":true,\"mode\":\"20000\"}","stderr":""}

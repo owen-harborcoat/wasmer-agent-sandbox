@@ -1,0 +1,18 @@
+{"sdk":"0.19.1","node":"24.21.0","platform":"win32","osRelease":"10.0.26200","arch":"x64","cache":"warm","pkg":"wasmer/edgejs"}
+{"name":"top-level stdout (control)","script":"node /workspace/log.js","exit":0,"reason":"exited","stdout":"7","stderr":""}
+{"name":"console.log | cat","script":"node /workspace/log.js | cat","exit":0,"reason":"exited","stdout":"","stderr":""}
+{"name":"$(console.log)","script":"x=$(node /workspace/log.js); echo \"captured=[$x]\"","exit":0,"reason":"exited","stdout":"captured=[]","stderr":""}
+{"name":"console.log + 300ms linger | cat","script":"node /workspace/linger.js | cat","exit":0,"reason":"exited","stdout":"","stderr":""}
+{"name":"200 KB stdout.write | wc -c","script":"node /workspace/big.js | wc -c","exit":0,"reason":"exited","stdout":"0","stderr":""}
+{"name":"fs.writeSync(1) | cat","script":"node /workspace/writesync.js | cat","exit":0,"reason":"exited","stdout":"7","stderr":""}
+{"name":"console.log > file","script":"node /workspace/log.js > /workspace/out.txt; cat /workspace/out.txt","exit":0,"reason":"exited","stdout":"7","stderr":""}
+{"name":"printf | cat (control)","script":"printf \"7\\n\" | cat","exit":0,"reason":"exited","stdout":"7","stderr":""}
+{"name":"stdout kind: top-level","script":"node /workspace/kind.js","exit":0,"reason":"exited","stdout":"","stderr":"{\"ctor\":\"WriteStream\",\"isTTY\":true,\"isatty\":true,\"mode\":\"20000\",\"fifo\":false,\"sock\":false,\"chr\":true}"}
+{"name":"stdout kind: pipe","script":"node /workspace/kind.js | cat","exit":0,"reason":"exited","stdout":"","stderr":"{\"ctor\":\"Writable\",\"isTTY\":null,\"isatty\":false,\"mode\":\"0\",\"fifo\":false,\"sock\":false,\"chr\":false}"}
+{"name":"bash [ -p ] on a pipe","script":"echo x | { [ -p /dev/stdin ] && echo fifo || echo not-fifo; }","exit":0,"reason":"exited","stdout":"not-fifo","stderr":""}
+{"name":"echo | process.stdin","script":"echo hi | node /workspace/stdin-stream.js","exit":0,"reason":"exited","stdout":"\"\"","stderr":""}
+{"name":"echo | fs.readFileSync(0)","script":"echo hi | node /workspace/stdin-fs.js","exit":0,"reason":"exited","stdout":"\"hi\\n\"","stderr":""}
+{"name":"stdin kind: pipe","script":"echo hi | node /workspace/stdin-kind.js","exit":0,"reason":"exited","stdout":"{\"ctor\":\"Readable\",\"mode\":\"0\"}","stderr":""}
+{"name":"spawnSync node","script":"node /workspace/child-sync.js","exit":0,"reason":"exited","stdout":"{\"status\":0,\"stdout\":\"\"}","stderr":""}
+{"name":"spawn node (async)","script":"node /workspace/child-async.js","exit":0,"reason":"exited","stdout":"{\"status\":0,\"stdout\":\"7\\n\"}","stderr":""}
+{"name":"execSync node","script":"node /workspace/exec-sync.js","exit":0,"reason":"exited","stdout":"\"\"","stderr":""}
