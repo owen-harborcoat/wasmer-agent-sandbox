@@ -62,7 +62,7 @@ The evidence for #542 and the Node crash, with run ids, is in
 `.git/info/exclude`) holds the filed drafts 01–03 and 06–07, plus unfiled `04` (missing-file error code)
 and `05` (docs on per-command overlays).
 
-## Unfiled SDK findings (2026-10-06/11)
+## Unfiled SDK findings (2026-10-06/07)
 
 All in PLAN.md, with evidence in `spikes/`:
 
