@@ -96,4 +96,5 @@ Pass `{ sandbox }` instead to wrap a `WasmerSandbox` you manage. The provider th
 - **A command that never blocks can't be stopped.** A CPU-bound loop (Python `while True: pass`, a
   Node `for (;;)`) is reported as timed out or killed but keeps running and holds a core until your
   process exits, and closing the `Wasmer` client then never resolves. The limits protect you from
-  sleeping and waiting guests, not spinning ones.
+  sleeping and waiting guests, not spinning ones
+  ([wasmerio/wasmer-sdk#556](https://github.com/wasmerio/wasmer-sdk/issues/556)).

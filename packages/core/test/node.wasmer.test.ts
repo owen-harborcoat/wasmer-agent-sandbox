@@ -91,7 +91,7 @@ describe('Node guests (Edge.js)', () => {
   // Not tested here: a busy loop (`for (;;) {}`, or one calling fs.statSync) reports `timeout` and
   // exit 137, but the guest keeps a core busy and `Wasmer.close()` never resolves, which would hang
   // this file. Same for Python. Only guests that block are stopped (spikes/2026-10-11-edgejs-in-sdk,
-  // busy-loop.mjs). This one sleeps.
+  // busy-loop.mjs, wasmerio/wasmer-sdk#556). This one sleeps.
   it('stops a sleeping node process at the time limit', async () => {
     const result = await sandbox.exec(`node -e 'setTimeout(() => {}, 60000)'`, {
       timeoutMs: 1_000,

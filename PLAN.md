@@ -247,7 +247,8 @@ plus `ubuntu-24.04` and `windows-2025` CI (`stress.yml` `node-script` job).
   cause), wasmerio/edgejs#166. Pinned in `node.wasmer.test.ts`. `session.description` warns the model.
 - **A guest that never blocks can't be stopped** (Python and Node loops, with or without syscalls):
   `timeoutMs` and `kill()` report it stopped, it keeps a core, and `Wasmer.close()` never resolves. Same
-  on 0.18.0 and 0.19.0. bash's loop and sleeping guests do stop. Not filed yet.
+  on 0.18.0 and 0.19.0. bash's loop and sleeping guests do stop. It doesn't starve
+  other sandboxes, but each stopped loop keeps a core until the process exits. Filed as wasmerio/wasmer-sdk#556.
 - wasmer-sdk#547 (Edge.js sandboxes leaking ~55 MB each): unbounded on 0.19.0, levels off at 1.7–2.6 GB
   on 0.19.1 over 120 sandboxes. Numbers posted on #547.
 - The command's own stdio still reports a tty (char device, `0o20000`): filed as wasmerio/wasmer-sdk#555

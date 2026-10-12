@@ -118,8 +118,8 @@ time on one client and, after each, times a fresh sandbox's `echo ok` on that cl
 outnumber the cores, everything else in the process slows down but keeps working.
 
 Impact for agents: a model-written infinite loop is reported as a timeout and then holds a core until
-the host process exits, and the host can't close its client. Reported publicly on wasmer-sdk on
-2026-10-11: availability only, trivial to hit by accident, Edge.js's security doc already lists CPU
+the host process exits, and the host can't close its client. Filed publicly as wasmerio/wasmer-sdk#556
+on 2026-10-11: availability only, trivial to hit by accident, Edge.js's security doc already lists CPU
 interruption as open, and wasmer-sdk has no private channel. The suite can't hold a test for
 it (teardown hangs), so `node.wasmer.test.ts` uses a sleeping guest for its timeout test.
 

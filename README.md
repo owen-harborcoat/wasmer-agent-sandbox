@@ -36,6 +36,7 @@ Against `@wasmer/sdk` 0.18 and 0.19, mostly on Linux CI:
 - **A guest that never blocks can't be stopped.** Python `while True: pass`, or a Node loop with or
   without `fs` calls: `timeoutMs` and `kill()` report the guest as stopped, but it keeps a core busy
   and `Wasmer.close()` never resolves. Sleeping guests and bash loops do stop.
+  [wasmerio/wasmer-sdk#556](https://github.com/wasmerio/wasmer-sdk/issues/556),
   [findings](spikes/2026-10-11-edgejs-in-sdk/findings.md)
 - **Node guests (Edge.js) lose output that goes into a pipe**: `node app.js | head`, `$(node app.js)`
   and `execSync('node …')` come back empty with exit 0, and piped stdin reads nothing. WASIX pipes

@@ -50,6 +50,7 @@ repro and raw output, no templated sections (see the saved memory on public tone
 | wasmerio/wasmer-sdk#554 | **Our PR** (2026-10-07): sync fs calls (`stat`, `readDir`, `mkdir`, `remove`) return a plain Error that `WasmerError.is()` misses; switch them to `rethrowSync` | open, unreviewed. Its only red check is the Browser job, cancelled while `playwright install` was still fetching apt packages (their CI). When it ships, flip the pinned conformance test |
 | wasmerio/wasmer-sdk#547 | Not ours (tobowers): closed Edge.js sandboxes keep ~50 MB each | open. **We commented 2026-10-11**: unbounded on 0.19.0, levels off on 0.19.1 (#550), plateau still 1.7–2.6 GB |
 | wasmerio/wasmer-sdk#555 | **Ours** (2026-10-11): captured top-level stdio still reports a tty, the rest of wasmer#6425 | open |
+| wasmerio/wasmer-sdk#556 | **Ours** (2026-10-11): `timeoutMs` and `kill()` don't stop a guest that never blocks; it keeps a core and `Wasmer.close()` hangs | open. Filed publicly with the user's go-ahead (availability only, no private channel on wasmer-sdk). Doesn't starve other sandboxes; each stopped loop keeps a core. Repro `busy-loop.mjs`, `starve.mjs` |
 | wasmerio/wasmer#7092 | **Ours** (2026-10-11): WASIX pipes have no file type, `fstat()` gives `st_mode 0` | open. Root cause of edgejs#166 |
 | wasmerio/edgejs#166 | **Ours** (2026-10-11): stdout/stdin are no-op streams when they're pipes | open. We offered a stopgap PR (`GuessHandleType`: unknown on fds 0–2 → `UV_FILE` under WASI). Wait for a maintainer to say yes before building it |
 | wasmerio/wasmer#6425 | guest stdio reports as a TTY (not ours) | **closed 2026-10-08** by its author after our comment. The remainder is wasmer-sdk#555 |
@@ -64,14 +65,6 @@ and `05` (docs on per-command overlays).
 ## Unfiled SDK findings (2026-10-06/11)
 
 All in PLAN.md, with evidence in `spikes/`:
-
-- **A guest that never blocks can't be stopped** (2026-10-11). Python `while True: pass`, or a Node loop
-  with or without `fs` calls: `timeoutMs` reports `timeout`/137 and `kill()`'s `wait()` resolves, but the
-  guest keeps a full core and `Wasmer.close()` never resolves. Windows and Linux, 0.18.0 through 0.19.1.
-  Sleeping guests and bash's `while :` loop stop. Repro: `spikes/2026-10-11-edgejs-in-sdk/busy-loop.mjs`.
-  The worst one for agents (a model-written infinite loop), and the README already mentions it.
-  **Ask the user** how to report it: a public wasmer-sdk issue like #542, or privately. wasmer-sdk has
-  no private vulnerability reporting enabled; wasmerio/wasmer and wasmerio/edgejs do.
 
 - **A guest that SIGTERMs itself crashes or hangs the host process** (`memory access out of bounds`, `table
   index is out of bounds`, `unaligned accesses`, "Scheduler is dead", or a silent hang). 0.18.0: the
@@ -145,7 +138,7 @@ since `gh run view --log` returns nothing until the whole run finishes.
 ## Next steps, in order
 
 0. **Check the upstream tracker for replies**, especially #554 (our PR), the 2026-10-11 filings (wasmer#7092,
-   edgejs#166, wasmer-sdk#555) and comments (#547, #541). If Wasmer answers the framework question, it
+   edgejs#166, wasmer-sdk#555, #556) and comments (#547, #541). If Wasmer answers the framework question, it
    reorders M2. If a maintainer picks an option on #541, send that small PR first. Check
    `npm view @wasmer/sdk version`; on a new release, rerun the suite stress, the kill-close repro, the
    guest-signal tally, `busy-loop.mjs` and `pipes.mjs`, and update the comparison in PLAN.md.
@@ -161,7 +154,6 @@ since `gh run view --log` returns nothing until the whole run finishes.
      SECURITY-HOST-JS-NAPI.md lists both as open). Anything found there goes to Wasmer privately.
 2. **Upstream items. Ask the user before filing new issues** (comments on threads we're already in are
    fine):
-   - The busy-loop finding (above): ask how to report it first.
    - The guest self-signal crash (above) as a wasmer-sdk issue, with the tally and repro.
    - A minimal repro for the `RefCell` panic, then file it. Start from the first ~6 tests of
      `sandbox.wasmer.test.ts` with the TTY test split, as a plain script in a loop on Node 22.
