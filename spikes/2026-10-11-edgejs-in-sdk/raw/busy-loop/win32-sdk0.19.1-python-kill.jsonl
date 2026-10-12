@@ -1,0 +1,7 @@
+{"sdk":"0.19.1","node":"24.21.0","platform":"win32","osRelease":"10.0.26200","arch":"x64","cache":"warm","shape":"python","stop":"kill","pkg":"python/python@=3.13.20"}
+{"idleCpuCores":0}
+{"killReturnedMs":1074,"wait":"done"}
+{"cpuCoresAfter":0.99}
+{"sandboxClose":"done","ms":1}
+{"wasmerClose":"still pending after 15000 ms","ms":15008}
+{"cpuCoresAfterClose":0.98}

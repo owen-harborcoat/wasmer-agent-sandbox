@@ -33,6 +33,22 @@ Against `@wasmer/sdk` 0.18 and 0.19, mostly on Linux CI:
   [findings](spikes/2026-10-06-sdk-refcell-panic/findings.md)
 - `fs.stat`, `readDir`, `mkdir` and `remove` reject with an error `WasmerError.is()` doesn't recognise.
   Fix: [wasmerio/wasmer-sdk#554](https://github.com/wasmerio/wasmer-sdk/pull/554).
+- **A guest that never blocks can't be stopped.** Python `while True: pass`, or a Node loop with or
+  without `fs` calls: `timeoutMs` and `kill()` report the guest as stopped, but it keeps a core busy
+  and `Wasmer.close()` never resolves. Sleeping guests and bash loops do stop.
+  [findings](spikes/2026-10-11-edgejs-in-sdk/findings.md)
+- **Node guests (Edge.js) lose output that goes into a pipe**: `node app.js | head`, `$(node app.js)`
+  and `execSync('node …')` come back empty with exit 0, and piped stdin reads nothing. WASIX pipes
+  have no file type ([wasmerio/wasmer#7092](https://github.com/wasmerio/wasmer/issues/7092)), so Node
+  picks its no-op stream ([wasmerio/edgejs#166](https://github.com/wasmerio/edgejs/issues/166)).
+- A command's own stdio still reports as a terminal when the host captures it
+  ([wasmerio/wasmer-sdk#555](https://github.com/wasmerio/wasmer-sdk/issues/555)), so `python -` with
+  piped stdin opens the REPL.
+- `wasmer/edgejs` (guest JS on the host's engine) needs WebAssembly JSPI: on Node 22 it panics the SDK
+  and kills the client ([#541](https://github.com/wasmerio/wasmer-sdk/issues/541#issuecomment-6117734741)).
+  `wasmer/edgejs-quickjs` runs on 22.19+.
+- Repeated Edge.js sandboxes leaked ~55 MB each on 0.19.0; 0.19.1 levels off
+  ([#547](https://github.com/wasmerio/wasmer-sdk/issues/547#issuecomment-6117734523)).
 
 We're on 0.19.1 now. 0.19 fixes the SIGPIPE noise (#540) and the TTY report for pipes inside a guest.
 Comparison with 0.18.0 in [PLAN.md](PLAN.md).

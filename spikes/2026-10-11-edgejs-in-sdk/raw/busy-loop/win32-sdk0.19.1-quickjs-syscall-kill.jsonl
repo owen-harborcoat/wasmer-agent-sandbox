@@ -1,0 +1,7 @@
+{"sdk":"0.19.1","node":"24.21.0","platform":"win32","osRelease":"10.0.26200","arch":"x64","cache":"warm","shape":"quickjs-syscall","stop":"kill","pkg":"wasmer/edgejs-quickjs@=0.2.5"}
+{"idleCpuCores":0.03}
+{"killReturnedMs":1123,"wait":"done"}
+{"cpuCoresAfter":1.03}
+{"sandboxClose":"done","ms":1}
+{"wasmerClose":"still pending after 15000 ms","ms":15001}
+{"cpuCoresAfterClose":0.99}

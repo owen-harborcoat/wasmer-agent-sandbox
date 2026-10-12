@@ -3,8 +3,10 @@
 //
 // Run from the repo root: node spikes/2026-10-11-edgejs-in-sdk/busy-loop.mjs <shape> [stop] [sdk dir]
 //   shape: quickjs (`node -e 'for (;;) {}'` on wasmer/edgejs-quickjs), hostjs (same on wasmer/edgejs),
-//          python (`while True: pass`), bash (`while :; do :; done`),
-//          quickjs-sleep (`setTimeout` for 60 s, control: not CPU-bound)
+//          python (`while True: pass`), python-syscall (`os.stat` in the loop),
+//          bash (`while :; do :; done`),
+//          quickjs-syscall (the loop calls fs.statSync), quickjs-sleep (`setTimeout` for 60 s,
+//          control: not CPU-bound)
 //   stop:  timeout (default, timeoutMs 1000) or kill (spawn, kill() after 1 s)
 //   sdk dir: a directory with its own node_modules/@wasmer/sdk; defaults to the pinned version
 import { existsSync, readFileSync, writeSync } from 'node:fs';
@@ -27,7 +29,13 @@ const shapes = {
   quickjs: ['wasmer/edgejs-quickjs@=0.2.5', 'node', ['-e', 'for (;;) {}']],
   hostjs: ['wasmer/edgejs@=0.2.5', 'node', ['-e', 'for (;;) {}']],
   python: ['python/python@=3.13.20', 'python', ['-c', 'while True: pass']],
+  'python-syscall': ['python/python@=3.13.20', 'python', ['-c', 'import os\nwhile True: os.stat("/")']],
   bash: ['wasmer/bash@=1.0.25', 'bash', ['-c', 'while :; do :; done']],
+  'quickjs-syscall': [
+    'wasmer/edgejs-quickjs@=0.2.5',
+    'node',
+    ['-e', 'for (;;) require("fs").statSync("/workspace")'],
+  ],
   'quickjs-sleep': ['wasmer/edgejs-quickjs@=0.2.5', 'node', ['-e', 'setTimeout(() => {}, 60000)']],
 };
 const shape = process.argv[2] ?? 'quickjs';

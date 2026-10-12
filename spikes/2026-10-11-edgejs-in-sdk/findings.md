@@ -81,6 +81,33 @@ The next command on the same client fails with `Scheduler is dead` (raw
 `leak-ci-ubuntu-node22-sdk0.19.1.log`). Node 24.21.0 works. So Node guests need Node 24 and Python
 guests ≥22.19, while the SDK's `engines` says `>=20` (wasmer-sdk#541).
 
+## A guest that never blocks can't be stopped
+
+Found when the Node suite's teardown hung. `busy-loop.mjs` runs a loop, stops it after 1 s with
+`timeoutMs` or `kill()`, measures the host process's CPU for 3 s, then caps `sandbox.close()` and
+`wasmer.close()` at 15 s each (raw `busy-loop/`):
+
+| Guest | Stop | Reported | Host CPU after | `wasmer.close()` |
+|---|---|---|---|---|
+| `node -e 'for (;;) {}'` (edgejs-quickjs) | timeout | `timeout`, 137 | 1 core | pending at 15 s |
+| same | kill | `wait()` resolves | 1 core | pending |
+| node loop calling `fs.statSync` | timeout, kill | `timeout` / resolves | 1 core | pending |
+| `node -e 'for (;;) {}'` (edgejs, host JS) | timeout | `timeout`, 137 | 1 core | pending |
+| `python -c 'while True: pass'` | timeout, kill | `timeout` / resolves | 1 core | pending |
+| python loop calling `os.stat` | timeout | `timeout`, 137 | 1 core | pending |
+| `bash -c 'while :; do :; done'` | timeout | `timeout`, 137 | 0 | 1 ms |
+| node `setTimeout` 60 s (control) | timeout | `timeout`, 137 | 0 | 2 ms |
+
+Windows 11 locally, and the same on `ubuntu-24.04` (python/timeout and quickjs/kill, CI runs
+38204616359 and 38204618946). Python and QuickJS behave the same on 0.18.0 and 0.19.0, so this isn't a
+regression. Only guests that block (sleep, poll) are stopped, plus bash's loop. A syscall per iteration
+isn't enough. The 2026-09-25 timeout spike said CPU-bound commands are killed on time, but it only ran
+bash's loop.
+
+Impact for agents: a model-written infinite loop is reported as a timeout and then holds a core until
+the host process exits, and the host can't close its client. Not filed yet. The suite can't hold a
+test for it (teardown hangs), so `node.wasmer.test.ts` uses a sleeping guest for its timeout test.
+
 ## Host-JS mode isn't a sandbox yet
 
 Edge.js's `SECURITY-HOST-JS-NAPI.md` says the host-engine package (`wasmer/edgejs`) must not be treated

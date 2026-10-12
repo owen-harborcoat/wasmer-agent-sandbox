@@ -229,6 +229,31 @@ New findings from writing conformance v0:
 - **bash `/dev/tcp`**: in `host` mode the connection reaches the host but bash can't use it. This corrects
   the earlier "cannot tell the modes apart".
 
+## Edge.js (Node guests) in SDK sandboxes (2026-10-11)
+
+Evidence: `spikes/2026-10-11-edgejs-in-sdk/findings.md`. SDK 0.19.1, Edge.js 0.2.5, Windows 11 locally
+plus `ubuntu-24.04` and `windows-2025` CI (`stress.yml` `node-script` job).
+
+- Edge.js is Wasmer's Node 24-compatible runtime (github.com/wasmerio/edgejs, MIT): Node's own code over
+  N-API, with the system layer on WASIX. Two registry packages. `wasmer/edgejs` runs guest JS in the
+  host's own engine: its `SECURITY-HOST-JS-NAPI.md` says that isn't a security boundary yet, and it needs
+  WebAssembly JSPI, so on Node 22 the first command panics the SDK and kills the client.
+  `wasmer/edgejs-quickjs` has QuickJS inside the guest and works on Node 22.19+. Core pins it as
+  `NODE_PACKAGE`.
+- Works: `node`, `npm` (pnpm underneath), `edge`, ESM/CJS, fs, workers, timers, crypto, exit codes,
+  host stdin, env/cwd, network policy (blocked when disabled, connects in host mode). No `npx`.
+- **Output into a pipe inside the guest is lost**, and piped stdin reads nothing. WASIX pipes stat as
+  `st_mode 0`, libuv says UNKNOWN, and Node picks its no-op stream. Filed: wasmerio/wasmer#7092 (root
+  cause), wasmerio/edgejs#166. Pinned in `node.wasmer.test.ts`. `session.description` warns the model.
+- **A guest that never blocks can't be stopped** (Python and Node loops, with or without syscalls):
+  `timeoutMs` and `kill()` report it stopped, it keeps a core, and `Wasmer.close()` never resolves. Same
+  on 0.18.0 and 0.19.0. bash's loop and sleeping guests do stop. Not filed yet.
+- wasmer-sdk#547 (Edge.js sandboxes leaking ~55 MB each): unbounded on 0.19.0, levels off at 1.7–2.6 GB
+  on 0.19.1 over 120 sandboxes. Numbers posted on #547.
+- The command's own stdio still reports a tty (char device, `0o20000`): filed as wasmerio/wasmer-sdk#555
+  after wasmer#6425 was closed. `create_std_dev_inner` in lib/wasix stamps `CharacterDevice` on every
+  stdio inode.
+
 ## Repository layout (target)
 
 ```
@@ -308,6 +333,11 @@ spikes/              dated throwaway experiments with raw results
   #539 (timeout), #540 (SIGPIPE stderr noise), #541 (Python needs exnref / `engines`). Drafts for the
   missing-file error code and the overlay docs are kept local.
 - Ask a maintainer which framework to publish first.
+- [x] Node guests via Edge.js (2026-10-11): `NODE_PACKAGE` (`wasmer/edgejs-quickjs@=0.2.5`) in core,
+  `packages/core/test/node.wasmer.test.ts` (13 tests: Node 24 on WASI, ESM/CJS, persistence, exit codes,
+  stdin, cwd/env, npm, timeout and abort of a sleeping guest, network policy, two pinned bugs), and a
+  Node line in `session.description`. Suite: 96 real-Wasmer + 9 unit tests. Filed wasmer#7092,
+  edgejs#166, wasmer-sdk#555; commented on wasmer-sdk#547 and #541.
 
 ### M3: Oct 16 – 30: Edge dashboard + workloads
 - Results API + dashboard on Wasmer Edge, managed Postgres, scheduled runs.

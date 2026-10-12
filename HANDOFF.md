@@ -1,6 +1,6 @@
 # Handoff
 
-State as of 2026-10-07, for the next working session. Read this, then [CLAUDE.md](CLAUDE.md)
+State as of 2026-10-11, for the next working session. Read this, then [CLAUDE.md](CLAUDE.md)
 (working rules), then [PLAN.md](PLAN.md) (decisions, verified facts, milestones).
 
 Repo: https://github.com/owen-harborcoat/wasmer-agent-sandbox (public, `main`). The local
@@ -29,20 +29,30 @@ Target ~2026-11-07 (see PLAN.md for the four milestones).
   `spikes/2026-10-06-sdk-refcell-panic/`). The TTY test stays one command. Change one thing per stress run.
 - **Waiting on Wasmer** (asked 2026-10-06): which agent framework they'd want an adapter for first, and how the
   local SDK and StackMachine fit together. M2's framework order and M3's hosting depend on the answer.
+  Nothing back as of 2026-10-11.
+- **Node guests via Edge.js** (2026-10-11, the user wants to contribute to wasmerio/edgejs):
+  `NODE_PACKAGE` (`wasmer/edgejs-quickjs@=0.2.5`) in core, 13 tests in `node.wasmer.test.ts`, and a Node
+  warning in `session.description`. 96 real-Wasmer + 9 unit tests. Evidence and the Edge.js picture
+  (roadmap is edgejs#8, no Windows CI, host-JS mode not a security boundary) in
+  `spikes/2026-10-11-edgejs-in-sdk/findings.md` and PLAN.md.
 
 ## Upstream tracker
 
 Check these for replies first thing. Match the repo's tone in any reply: short first-person prose, a
 repro and raw output, no templated sections (see the saved memory on public tone).
 
-| Where | What | Status 2026-10-07 |
+| Where | What | Status 2026-10-11 |
 |---|---|---|
 | wasmerio/wasmer-sdk#539 | `timeoutMs` fires late while the guest sleeps | open, no reply. Still broken on 0.19.1 (all four CI legs, 3.1–3.4 s for a 500 ms limit) |
-| wasmerio/wasmer-sdk#540 | SIGPIPE leaves noise in stderr | open. Fixed in 0.19.x (0 of 30 per shape on all legs). **We commented 2026-10-07** with the numbers and said it's fine to close |
-| wasmerio/wasmer-sdk#541 | Python guests need exnref (Node ≥ 22.19), `engines` says `>=20` | open, no reply. `engines` unchanged in 0.19.x |
+| wasmerio/wasmer-sdk#540 | SIGPIPE leaves noise in stderr | open. Fixed in 0.19.x (0 of 30 per shape on all legs). We commented 2026-10-07 with the numbers and said it's fine to close |
+| wasmerio/wasmer-sdk#541 | Python guests need exnref (Node ≥ 22.19), `engines` says `>=20` | open, no reply. **We commented 2026-10-11**: `wasmer/edgejs` needs JSPI and panics the SDK on Node 22 |
 | wasmerio/wasmer-sdk#542 | `kill()` can terminate a worker holding the allocator lock; process hangs | open, no reply. Still there: kill-close stalls of 20 on Node 22.23.0 were 6 (0.18.0), 9 (0.19.0), 4 (0.19.1) |
-| wasmerio/wasmer-sdk#554 | **Our PR** (2026-10-07): sync fs calls (`stat`, `readDir`, `mkdir`, `remove`) return a plain Error that `WasmerError.is()` misses; switch them to `rethrowSync` | open. Verified against the published 0.19.1 `dist` (couldn't build the wasm locally). When it ships, flip the pinned conformance test |
-| wasmerio/wasmer#6425 | guest stdio reports as a TTY (not ours) | open. **We commented 2026-10-07**: the issue's own repro is fixed in 0.19.0; the command's own stdio under the JS SDK host still says tty |
+| wasmerio/wasmer-sdk#554 | **Our PR** (2026-10-07): sync fs calls (`stat`, `readDir`, `mkdir`, `remove`) return a plain Error that `WasmerError.is()` misses; switch them to `rethrowSync` | open, unreviewed. Its only red check is the Browser job, cancelled while `playwright install` was still fetching apt packages (their CI). When it ships, flip the pinned conformance test |
+| wasmerio/wasmer-sdk#547 | Not ours (tobowers): closed Edge.js sandboxes keep ~50 MB each | open. **We commented 2026-10-11**: unbounded on 0.19.0, levels off on 0.19.1 (#550), plateau still 1.7–2.6 GB |
+| wasmerio/wasmer-sdk#555 | **Ours** (2026-10-11): captured top-level stdio still reports a tty, the rest of wasmer#6425 | open |
+| wasmerio/wasmer#7092 | **Ours** (2026-10-11): WASIX pipes have no file type, `fstat()` gives `st_mode 0` | open. Root cause of edgejs#166 |
+| wasmerio/edgejs#166 | **Ours** (2026-10-11): stdout/stdin are no-op streams when they're pipes | open. We offered a stopgap PR (`GuessHandleType`: unknown on fds 0–2 → `UV_FILE` under WASI). Wait for a maintainer to say yes before building it |
+| wasmerio/wasmer#6425 | guest stdio reports as a TTY (not ours) | **closed 2026-10-08** by its author after our comment. The remainder is wasmer-sdk#555 |
 | nodejs/node#66366 | Node 24 V8 CHECK/SIGSEGV, fixed upstream in V8 `9b8ca54d5a`, missing from 24.x | open. Contributor ThatKJ took it |
 | nodejs/node#66376 | ThatKJ's backport PR (V8 `68210d500a` + `9b8ca54d5a`) | open, CI green, no review yet. Our test result is posted there |
 
@@ -51,9 +61,17 @@ The evidence for #542 and the Node crash, with run ids, is in
 `.git/info/exclude`) holds the filed drafts 01–03 and 06–07, plus unfiled `04` (missing-file error code)
 and `05` (docs on per-command overlays).
 
-## Unfiled SDK findings (2026-10-06/07)
+## Unfiled SDK findings (2026-10-06/11)
 
-All in PLAN.md's comparison section, with evidence in `spikes/`:
+All in PLAN.md, with evidence in `spikes/`:
+
+- **A guest that never blocks can't be stopped** (2026-10-11). Python `while True: pass`, or a Node loop
+  with or without `fs` calls: `timeoutMs` reports `timeout`/137 and `kill()`'s `wait()` resolves, but the
+  guest keeps a full core and `Wasmer.close()` never resolves. Windows and Linux, 0.18.0 through 0.19.1.
+  Sleeping guests and bash's `while :` loop stop. Repro: `spikes/2026-10-11-edgejs-in-sdk/busy-loop.mjs`.
+  The worst one for agents (a model-written infinite loop), and the README already mentions it.
+  **Ask the user** how to report it: a public wasmer-sdk issue like #542, or privately. wasmer-sdk has
+  no private vulnerability reporting enabled; wasmerio/wasmer and wasmerio/edgejs do.
 
 - **A guest that SIGTERMs itself crashes or hangs the host process** (`memory access out of bounds`, `table
   index is out of bounds`, `unaligned accesses`, "Scheduler is dead", or a silent hang). 0.18.0: the
@@ -116,6 +134,7 @@ gh workflow run stress.yml --ref main -f vitest_args='<file> -t "<name>"'   # na
 gh workflow run stress.yml --ref main -f job=worker-init-repro -f repro_mode=kill-close -f iterations=30 -f processes=10 -f node='["24.21.0"]' -f attempts='[1,…,20]'
 gh workflow run node-backport.yml --ref main                       # Node v24.x-staging ± V8 cherry-picks, then the repro
 gh workflow run node-matrix.yml --ref main                         # Python guest across Node releases
+gh workflow run stress.yml --ref main -f job=node-script -f os='["ubuntu-24.04","windows-2025"]' -f node='["24.21.0"]' -f attempts='[1]' -f script_args='spikes/2026-10-11-edgejs-in-sdk/pipes.mjs wasmer/edgejs-quickjs'   # any node script
 ```
 
 Repro modes: `basic`, `lifecycle`, `kill-close`, `kill-close-shared`, `kill-close-idle`,
@@ -125,12 +144,24 @@ since `gh run view --log` returns nothing until the whole run finishes.
 
 ## Next steps, in order
 
-0. **Check the upstream tracker for replies**, especially #554 (our PR) and the two comments. If Wasmer
-   answers the framework question, it reorders M2. If a maintainer picks an option on #541, send that
-   small PR first. Check `npm view @wasmer/sdk version`; on a new release, rerun the suite stress, the
-   kill-close repro and the guest-signal tally, and update the comparison in PLAN.md.
-1. **Upstream items. Ask the user before filing new issues** (comments on threads we're already in were
-   fine on 2026-10-07):
+0. **Check the upstream tracker for replies**, especially #554 (our PR), the 2026-10-11 filings (wasmer#7092,
+   edgejs#166, wasmer-sdk#555) and comments (#547, #541). If Wasmer answers the framework question, it
+   reorders M2. If a maintainer picks an option on #541, send that small PR first. Check
+   `npm view @wasmer/sdk version`; on a new release, rerun the suite stress, the kill-close repro, the
+   guest-signal tally, `busy-loop.mjs` and `pipes.mjs`, and update the comparison in PLAN.md.
+1. **Edge.js contributions** (the user approved this direction on 2026-10-11):
+   - If a maintainer wants the edgejs#166 stopgap, build it: fork wasmerio/edgejs, change `GuessHandleType`
+     in `src/edge_util.cc` (under WASI, `UV_UNKNOWN_HANDLE` on fds 0–2 → `UV_FILE`, next to the
+     `/dev/null` case), let the fork's CI build the WASIX package, and run `pipes.mjs` against that webc
+     (the SDK takes WEBC bytes as a package source). It can't be built on this Windows machine.
+   - Keep running agent-shaped Node workloads through `NODE_PACKAGE` and file what breaks. Edge.js's CI has
+     no Windows leg and its Node test gate skips child_process, fs, net and worker_threads, so our
+     Windows + Linux runs cover ground theirs doesn't. PLAN M3's "Node MCP via Edge.js" workload fits here.
+   - Later, only if the user asks: a threat model and realm-escape tests for host-JS mode (their
+     SECURITY-HOST-JS-NAPI.md lists both as open). Anything found there goes to Wasmer privately.
+2. **Upstream items. Ask the user before filing new issues** (comments on threads we're already in are
+   fine):
+   - The busy-loop finding (above): ask how to report it first.
    - The guest self-signal crash (above) as a wasmer-sdk issue, with the tally and repro.
    - A minimal repro for the `RefCell` panic, then file it. Start from the first ~6 tests of
      `sandbox.wasmer.test.ts` with the TTY test split, as a plain script in a loop on Node 22.
@@ -138,10 +169,10 @@ since `gh run view --log` returns nothing until the whole run finishes.
    - Safe to do without asking: a `stress.yml` mode that runs
      `spikes/2026-10-06-sdk-0.18-guest-signals/repro.mjs` on `windows-2025` and `ubuntu-24.04`, to see
      whether the self-signal crash is what the intermittent Windows CI panics have been.
-2. **M2, gated on Wasmer's framework answer.** By default: `packages/deepagents` (LangChain deepagentsjs)
+3. **M2, gated on Wasmer's framework answer.** By default: `packages/deepagents` (LangChain deepagentsjs)
    against `@langchain/sandbox-standard-tests`, and the MCP Sentinel fixture as workload #1. If there's no
    answer by ~2026-10-13, start the LangChain provider anyway.
-3. **M3 hosting is undecided.** The plan says a results dashboard on Wasmer Edge. Wasmer launched
+4. **M3 hosting is undecided.** The plan says a results dashboard on Wasmer Edge. Wasmer launched
    StackMachine on 2026-10-05 (stackmachine.com; SDKs at github.com/stackmachine/sdks): a hosted
    platform for agents to deploy apps, volumes, Postgres/MySQL/SQLite, email, cron and usage metrics, all
    through one GraphQL API. **It has no "run a command in a sandbox" API.** The user recalls Wasmer saying
@@ -155,7 +186,7 @@ since `gh run view --log` returns nothing until the whole run finishes.
   SDK harness docs ask for it to be outside. Only `/workspace` persists, so moving it out loses state.
 - The npm scope is `@owenota1337/*` but the GitHub owner is `owen-harborcoat`. Settle this before
   publishing (packages are `private: true` for now).
-- M3 hosting: Wasmer Edge or StackMachine (see next steps, item 3).
+- M3 hosting: Wasmer Edge or StackMachine (see next steps, item 4).
 
 ## Branches
 
@@ -165,6 +196,15 @@ are deleted; their stress runs keep the logs. The fork `owen-harborcoat/wasmer-s
 `fix/fs-sync-errors`.
 
 ## Gotchas learned the hard way
+
+- Never run a guest that loops without blocking in the suite (`for (;;) {}`, `while True: pass`): the
+  timeout reports success, the guest keeps spinning, and the file's `Wasmer.close()` hangs teardown.
+  Use a sleeping guest for timeout tests. Ad-hoc probes should end with `process.exit()`.
+- Don't pipe or `$(...)` an Edge.js `node` inside the guest in tests or probes: the output is dropped
+  (edgejs#166). Let it print directly, or have it write to a file.
+- Use `wasmer/edgejs-quickjs` (`NODE_PACKAGE`), not `wasmer/edgejs`: the host-JS one needs JSPI and
+  panics the SDK on Node 22, and isn't a security boundary.
+- The SDK's per-command `env` goes in `sandbox.command(cmd, args, { env })`, not in `run()`.
 
 - AI SDK docs lag the code: read types from the installed `@ai-sdk/provider-utils`, not the website.
 - bash `/dev/tcp` says "Not supported" in every network mode, but in host mode the connection does reach

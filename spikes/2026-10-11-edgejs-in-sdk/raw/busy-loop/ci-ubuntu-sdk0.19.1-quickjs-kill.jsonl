@@ -1,0 +1,7 @@
+{"sdk":"0.19.1","node":"24.21.0","platform":"linux","osRelease":"6.17.0-1022-azure","arch":"x64","cache":"warm","shape":"quickjs","stop":"kill","pkg":"wasmer/edgejs-quickjs@=0.2.5"}
+{"idleCpuCores":0}
+{"killReturnedMs":1088,"wait":"done"}
+{"cpuCoresAfter":1}
+{"sandboxClose":"done","ms":0}
+{"wasmerClose":"still pending after 15000 ms","ms":15009}
+{"cpuCoresAfterClose":1}

@@ -1,0 +1,7 @@
+{"sdk":"0.19.1","node":"24.21.0","platform":"linux","osRelease":"6.17.0-1022-azure","arch":"x64","cache":"warm","shape":"python","stop":"timeout","pkg":"python/python@=3.13.20"}
+{"idleCpuCores":0}
+{"returnedMs":1178,"exit":137,"reason":"timeout"}
+{"cpuCoresAfter":1}
+{"sandboxClose":"done","ms":1}
+{"wasmerClose":"still pending after 15000 ms","ms":15010}
+{"cpuCoresAfterClose":1}
