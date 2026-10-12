@@ -7,6 +7,7 @@ export {
   type ExecLimits,
   type ExecOptions,
   type ExecResult,
+  NODE_PACKAGE,
   resolveLimits,
   SandboxPathError,
   type SandboxProvenance,

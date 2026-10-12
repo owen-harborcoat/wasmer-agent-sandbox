@@ -16,6 +16,15 @@ import {
 export const DEFAULT_SHELL_PACKAGE = 'wasmer/bash@=1.0.25';
 
 /**
+ * Node.js 24-compatible runtime (Edge.js) with QuickJS compiled into the guest: `node`, `npm`
+ * (pnpm underneath), `edge`. Pass it in `packages` to give a sandbox Node. Not `wasmer/edgejs`:
+ * that one runs guest JavaScript in the host's own engine, which Edge.js's
+ * SECURITY-HOST-JS-NAPI.md says is not a security boundary yet, and it needs WebAssembly JSPI,
+ * so it panics the SDK on Node 22 (spikes/2026-10-11-edgejs-in-sdk).
+ */
+export const NODE_PACKAGE = 'wasmer/edgejs-quickjs@=0.2.5';
+
+/**
  * The only guest directory that persists between commands. Every other path
  * (`/tmp`, `/usr/local`, ...) is a fresh filesystem for each process, and
  * `sandbox.fs` rejects paths outside it.

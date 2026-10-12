@@ -31,9 +31,15 @@ export class WasmerSandboxSession implements SandboxSession {
       `Commands run in bash. Working directory: ${this.#sandbox.defaultWorkingDirectory}. HOME: ${this.#sandbox.home}.`,
       `Only files under ${WORKSPACE_DIR} persist between commands; /tmp and every other path start empty for each command.`,
       network === 'disabled' ? 'Network access is disabled.' : `Network mode: ${network}.`,
-      // wasmerio/wasmer#6425: the command's own stdio reports as a terminal (pipes inside it don't,
+      // wasmerio/wasmer-sdk#555: the command's own stdio reports as a terminal (pipes inside it don't,
       // since @wasmer/sdk 0.19.0).
       "Each command's own stdin and stdout report as a terminal although output is captured, so programs may print prompts or colour codes. Run scripts from a file or with -c.",
+      // wasmerio/edgejs#166: an Edge.js process whose stdout or stdin is a pipe gets a no-op stream.
+      ...(packages.some((p) => p.startsWith('wasmer/edgejs'))
+        ? [
+            'Node.js here is Edge.js. Its output is lost when piped or captured inside a command (node app.js | head, $(node app.js), execSync), and it reads nothing from piped stdin. Let node print directly, or write to a file and read that.',
+          ]
+        : []),
     ].join('\n');
   }
 

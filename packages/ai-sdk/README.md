@@ -62,7 +62,7 @@ directory, what persists, and network access.
 
 | Setting | Default | |
 |---|---|---|
-| `packages` | none | Extra registry packages, e.g. `python/python@=3.13.20`. The shell comes from `wasmer/bash@=1.0.25`. |
+| `packages` | none | Extra registry packages, e.g. `python/python@=3.13.20`, or `NODE_PACKAGE` from core for Node. The shell comes from `wasmer/bash@=1.0.25`. |
 | `files` | none | Written under `/workspace`: the only host data the guest can see. |
 | `env` | `HOME=/workspace/.home` | Guest environment. The host environment is never inherited. |
 | `network` | `{ mode: 'disabled' }` | `{ mode: 'host' }` gives the guest host networking. |
@@ -81,9 +81,19 @@ Pass `{ sandbox }` instead to wrap a `WasmerSandbox` you manage. The provider th
   (Claude Code, Codex) get `HarnessCapabilityUnsupportedError`. `setNetworkPolicy` is not
   implemented: the network mode is fixed when the sandbox is created.
 - **Each command's own stdin and stdout report as a terminal**, although the output is captured
-  ([wasmerio/wasmer#6425](https://github.com/wasmerio/wasmer/issues/6425)), so programs may print
+  ([wasmerio/wasmer-sdk#555](https://github.com/wasmerio/wasmer-sdk/issues/555)), so programs may print
   prompts or colour codes. Pipes and redirects inside a command report correctly since
   `@wasmer/sdk` 0.19.0 (`echo ... | python -` works). `session.description` tells the model to run
   scripts from a file or with `-c`.
 - **Only the installed packages' commands exist.** `wasmer/bash` brings bash and a coreutils set
   (no `which`, `git` or package manager).
+- **Node is Edge.js.** `NODE_PACKAGE` (`wasmer/edgejs-quickjs@=0.2.5`) gives `node`, `npm` (pnpm
+  underneath) and `edge`, Node 24-compatible, with QuickJS inside the guest. No `npx`. Avoid
+  `wasmer/edgejs`: it runs guest JavaScript in your process's own engine, which Edge.js doesn't
+  consider a security boundary yet, and it panics the SDK on Node 22. Node output that goes into a pipe
+  inside a command is lost ([wasmerio/edgejs#166](https://github.com/wasmerio/edgejs/issues/166)), and
+  `session.description` tells the model so.
+- **A command that never blocks can't be stopped.** A CPU-bound loop (Python `while True: pass`, a
+  Node `for (;;)`) is reported as timed out or killed but keeps running and holds a core until your
+  process exits, and closing the `Wasmer` client then never resolves. The limits protect you from
+  sleeping and waiting guests, not spinning ones.

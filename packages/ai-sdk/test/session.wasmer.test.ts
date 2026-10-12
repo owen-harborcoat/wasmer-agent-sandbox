@@ -4,7 +4,7 @@ import {
   resolveSandboxHomeDir,
 } from '@ai-sdk/harness/utils';
 import type { Experimental_SandboxSession } from '@ai-sdk/provider-utils';
-import { SandboxPathError, WasmerSandbox } from '@owenota1337/wasmer-sandbox-core';
+import { NODE_PACKAGE, SandboxPathError, WasmerSandbox } from '@owenota1337/wasmer-sandbox-core';
 import { Wasmer } from '@wasmer/sdk/node';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
@@ -119,7 +119,28 @@ describe('WasmerSandboxSession', () => {
     expect(session.description).toContain('Only files under /workspace persist');
     expect(session.description).toContain('Network access is disabled.');
     expect(session.description).toContain('Run scripts from a file or with -c.');
+    expect(session.description).not.toContain('Node.js');
   });
+
+  it('warns about piped node output only when Node is installed (wasmerio/edgejs#166)', async () => {
+    const sandbox = await WasmerSandbox.create({ wasmer, packages: [NODE_PACKAGE] });
+    try {
+      const withNode = new WasmerSandboxSession(sandbox);
+
+      expect(withNode.description).toContain('wasmer/edgejs-quickjs@0.2.5');
+      expect(withNode.description).toContain('Its output is lost when piped');
+      // The warning matches what happens: piped output vanishes, direct output arrives.
+      expect(await withNode.run({ command: `node -e 'console.log(7)' | cat` })).toMatchObject({
+        exitCode: 0,
+        stdout: '',
+      });
+      expect(await withNode.run({ command: `node -e 'console.log(7)'` })).toMatchObject({
+        stdout: '7\n',
+      });
+    } finally {
+      await sandbox.close();
+    }
+  }, 120_000);
 
   describe('run', () => {
     it('returns exit code, stdout and stderr without throwing on failure', async () => {
