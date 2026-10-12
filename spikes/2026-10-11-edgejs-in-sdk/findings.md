@@ -104,9 +104,24 @@ regression. Only guests that block (sleep, poll) are stopped, plus bash's loop. 
 isn't enough. The 2026-09-25 timeout spike said CPU-bound commands are killed on time, but it only ran
 bash's loop.
 
+It doesn't starve other sandboxes: the SDK keeps adding workers. `starve.mjs` stops Python loops one at a
+time on one client and, after each, times a fresh sandbox's `echo ok` on that client (raw
+`busy-loop/starve-*`):
+
+| Host | Loops stopped | Cores busy after | Next `echo ok` | `echo ok` on a second client |
+|---|---|---|---|---|
+| Windows 11, 24 threads | 1 / 6 / 12 | 1.05 / 6.2 / 10.9 | 10 / 15 / 17 ms (one 408 ms) | 333 ms |
+| `ubuntu-24.04`, 4 vCPU | 1 / 4 / 8 | 1.1 / 3.2 / 4.0 | 19 / 47 / 100 ms | 802 ms |
+| `windows-2025`, 4 vCPU | 1 / 4 / 8 | 1.1 / 3.9 / 4.0 | 29 / 42 / 93 ms | 1916 ms |
+
+(CI run 38207691469.) So each stopped loop keeps a core until the process exits. Once the loops
+outnumber the cores, everything else in the process slows down but keeps working.
+
 Impact for agents: a model-written infinite loop is reported as a timeout and then holds a core until
-the host process exits, and the host can't close its client. Not filed yet. The suite can't hold a
-test for it (teardown hangs), so `node.wasmer.test.ts` uses a sleeping guest for its timeout test.
+the host process exits, and the host can't close its client. Reported publicly on wasmer-sdk on
+2026-10-11: availability only, trivial to hit by accident, Edge.js's security doc already lists CPU
+interruption as open, and wasmer-sdk has no private channel. The suite can't hold a test for
+it (teardown hangs), so `node.wasmer.test.ts` uses a sleeping guest for its timeout test.
 
 ## Host-JS mode isn't a sandbox yet
 
