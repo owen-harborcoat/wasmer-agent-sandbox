@@ -1,6 +1,6 @@
 import { type Experimental_SandboxSession, extractLines } from '@ai-sdk/provider-utils';
 import {
-  type ExecResult,
+  stderrWithNotes,
   type WasmerSandbox,
   WORKSPACE_DIR,
 } from '@owenota1337/wasmer-sandbox-core';
@@ -49,7 +49,8 @@ export class WasmerSandboxSession implements SandboxSession {
       ...(env !== undefined ? { env } : {}),
       ...(abortSignal !== undefined ? { signal: abortSignal } : {}),
     });
-    return { exitCode: result.exitCode, stdout: result.stdout, stderr: withNotes(result) };
+    // The session contract returns only exit code and streams, so timeouts and truncation go on stderr.
+    return { exitCode: result.exitCode, stdout: result.stdout, stderr: stderrWithNotes(result) };
   };
 
   spawn = async ({ command, workingDirectory, env, abortSignal }: ProcessOptions) => {
@@ -122,21 +123,6 @@ export class WasmerSandboxSession implements SandboxSession {
       ...optionalSignal(abortSignal),
     });
   };
-}
-
-/**
- * The session contract returns only exit code and streams, so timeouts and
- * truncation would otherwise be invisible to the model. Report them on stderr.
- */
-function withNotes(result: ExecResult): string {
-  const notes: string[] = [];
-  if (result.reason === 'timeout') notes.push('[wasmer-sandbox] command timed out and was killed');
-  if (result.reason === 'terminated') notes.push('[wasmer-sandbox] command was terminated');
-  if (result.truncated.stdout) notes.push('[wasmer-sandbox] stdout was truncated');
-  if (result.truncated.stderr) notes.push('[wasmer-sandbox] stderr was truncated');
-  if (notes.length === 0) return result.stderr;
-  const separator = result.stderr === '' || result.stderr.endsWith('\n') ? '' : '\n';
-  return `${result.stderr}${separator}${notes.join('\n')}\n`;
 }
 
 // Buffer, not TextDecoder: TextDecoder drops a UTF-8 BOM, which would change a

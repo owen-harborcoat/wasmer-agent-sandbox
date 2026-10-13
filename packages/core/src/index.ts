@@ -1,3 +1,4 @@
+export type { DirectoryEntry, FileStat } from '@wasmer/sdk/node';
 export { collectProvenance, type Provenance, wasmerSdkVersion } from './provenance.js';
 export {
   type CommandOptions,
@@ -13,6 +14,7 @@ export {
   type SandboxProvenance,
   type SpawnedCommand,
   type SpawnOptions,
+  stderrWithNotes,
   WasmerSandbox,
   type WasmerSandboxOptions,
   WORKSPACE_DIR,

@@ -1,7 +1,9 @@
 import { posix } from 'node:path';
 import {
+  type DirectoryEntry,
   type ExitReason,
   type FileContents,
+  type FileStat,
   type NetworkPolicy,
   type Package,
   type PackageLoadProgress,
@@ -345,6 +347,30 @@ export class WasmerSandbox {
     }
   }
 
+  /** Kind and size of what is at `path`, or `null` if nothing exists there. */
+  async stat(path: string): Promise<FileStat | null> {
+    const resolved = this.#workspacePath(path);
+    try {
+      return await this.sdk.fs.stat(resolved);
+    } catch (error) {
+      // A path through a file (`a.txt/b`) gives "fd not a directory": nothing is there either.
+      if (isNotFound(error) || /not a directory/i.test((error as Error).message)) return null;
+      throw error;
+    }
+  }
+
+  /** Directory entries, or `null` if `path` is missing or not a directory. */
+  async readDir(path: string): Promise<readonly DirectoryEntry[] | null> {
+    const resolved = this.#workspacePath(path);
+    try {
+      return await this.sdk.fs.readDir(resolved);
+    } catch (error) {
+      // A file gives "invalid input" rather than a code of its own (@wasmer/sdk 0.19.1).
+      if (isNotFound(error) || (await this.stat(resolved))?.kind === 'file') return null;
+      throw error;
+    }
+  }
+
   /** Creates parent directories and overwrites any existing file. */
   async writeFile(path: string, contents: FileContents): Promise<void> {
     const resolved = this.#workspacePath(path);
@@ -395,6 +421,21 @@ export class WasmerSandbox {
   }
 }
 
+/**
+ * `stderr` with a line appended for each thing the bare streams don't show: a timeout, a
+ * termination, truncation. For adapters whose contract has nowhere else to say it.
+ */
+export function stderrWithNotes(result: ExecResult): string {
+  const notes: string[] = [];
+  if (result.reason === 'timeout') notes.push('[wasmer-sandbox] command timed out and was killed');
+  if (result.reason === 'terminated') notes.push('[wasmer-sandbox] command was terminated');
+  if (result.truncated.stdout) notes.push('[wasmer-sandbox] stdout was truncated');
+  if (result.truncated.stderr) notes.push('[wasmer-sandbox] stderr was truncated');
+  if (notes.length === 0) return result.stderr;
+  const separator = result.stderr === '' || result.stderr.endsWith('\n') ? '' : '\n';
+  return `${result.stderr}${separator}${notes.join('\n')}\n`;
+}
+
 export function resolveLimits(overrides: Partial<ExecLimits> = {}): ExecLimits {
   const limits = { ...DEFAULT_LIMITS, ...overrides };
   assertPositiveInteger('timeoutMs', limits.timeoutMs);
@@ -439,7 +480,19 @@ function isInWorkspace(path: string): boolean {
 // The SDK has no distinct code for a missing file: it reports FILESYSTEM_ERROR
 // with "entry not found" in the message (@wasmer/sdk 0.18.0).
 function isNotFound(error: unknown): boolean {
-  return WasmerError.is(error, 'FILESYSTEM_ERROR') && /entry not found/i.test(error.message);
+  return (
+    fsErrorCode(error) === 'FILESYSTEM_ERROR' && /entry not found/i.test((error as Error).message)
+  );
+}
+
+// `stat`, `readDir`, `mkdir` and `remove` reject with a plain Error named WasmerError that
+// `WasmerError.is()` doesn't recognise, though it carries the code (wasmerio/wasmer-sdk#554).
+function fsErrorCode(error: unknown): string | undefined {
+  if (WasmerError.is(error)) return error.code;
+  if (error instanceof Error && error.name === 'WasmerError' && 'code' in error) {
+    return String(error.code);
+  }
+  return undefined;
 }
 
 function isGone(error: unknown): boolean {
