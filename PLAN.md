@@ -322,7 +322,15 @@ spikes/              dated throwaway experiments with raw results
   planned 0.11.0 vs 0.18.0 (0.11 is stale). See "Conformance v0: SDK 0.18.0 vs 0.19.0 vs 0.19.1" above.
 
 ### M2: Oct 2 – 15: LangChain provider + workload #1
-- `packages/deepagents`, run against `@langchain/sandbox-standard-tests`.
+- [x] `packages/deepagents` (2026-10-13), started without Wasmer's framework answer as planned:
+  `WasmerDeepAgentsSandbox` extends deepagents 1.14.2's `BaseSandbox` and passes
+  `@langchain/sandbox-standard-tests` 2.0.1 (93/93). The guest shell lacks `find`, `stat`, `awk`,
+  `grep` and `sed`, which `BaseSandbox` builds `ls`/`read`/`grep`/`glob` from, so those run on the host
+  through the SDK fs API (core gained `stat` and `readDir`). `wasmer/findutils` (uutils find 0.10),
+  `wasmer/grep` and `wasmer/sed` exist on the registry but no awk does, and uutils find rejects
+  `-printf ''` and drops `
+`. A mutation (host `ls`/`grep` removed) fails 19 standard tests. Plus 11
+  tests of our own and a `createDeepAgent` loop with `FakeToolCallingModel`. Suite: 201 real-Wasmer + 9 unit.
 - Run a real `HarnessAgent` harness that doesn't need ports on the Wasmer provider; decide where
   harness state lives (`$HOME` is inside the working directory today).
 - Explore ports in `network: host` mode (guest listeners via `node:net`). Ports would allow

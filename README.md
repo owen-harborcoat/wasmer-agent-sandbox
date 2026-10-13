@@ -5,7 +5,8 @@ frameworks, plus a conformance lab that records where the alpha SDK works and wh
 
 Community project, not affiliated with or endorsed by Wasmer.
 
-Status: M1 done (core, AI SDK adapter, conformance v0). See [PLAN.md](PLAN.md).
+Status: M1 done (core, AI SDK adapter, conformance v0). M2 underway: a LangChain Deep Agents backend
+that passes `@langchain/sandbox-standard-tests`, and Node guests through Edge.js. See [PLAN.md](PLAN.md).
 
 ## Found so far
 

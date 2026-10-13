@@ -1,6 +1,6 @@
 # Handoff
 
-State as of 2026-10-11, for the next working session. Read this, then [CLAUDE.md](CLAUDE.md)
+State as of 2026-10-13, for the next working session. Read this, then [CLAUDE.md](CLAUDE.md)
 (working rules), then [PLAN.md](PLAN.md) (decisions, verified facts, milestones).
 
 Repo: https://github.com/owen-harborcoat/wasmer-agent-sandbox (public, `main`). The local
@@ -16,6 +16,10 @@ Target ~2026-11-07 (see PLAN.md for the four milestones).
 
 ## Where things stand
 
+- **LangChain Deep Agents backend** (2026-10-13, started without Wasmer's framework answer, as planned):
+  `packages/deepagents` `WasmerDeepAgentsSandbox` passes `@langchain/sandbox-standard-tests` 93/93, plus
+  11 tests of our own and a real `createDeepAgent` loop with a scripted model. `ls`/`read`/`grep`/`glob`
+  run on the host because the guest has no `find`/`stat`/`awk`/`grep`. 201 real-Wasmer + 9 unit tests.
 - **Working:** `packages/core` (`WasmerSandbox`), `packages/ai-sdk` (AI SDK `HarnessV1SandboxProvider`),
   and `examples/agent-demo`, which runs a live Fireworks model (Kimi K3) end to end: right in 4 of 4
   runs, ~30 s each.
@@ -161,9 +165,10 @@ since `gh run view --log` returns nothing until the whole run finishes.
    - Safe to do without asking: a `stress.yml` mode that runs
      `spikes/2026-10-06-sdk-0.18-guest-signals/repro.mjs` on `windows-2025` and `ubuntu-24.04`, to see
      whether the self-signal crash is what the intermittent Windows CI panics have been.
-3. **M2, gated on Wasmer's framework answer.** By default: `packages/deepagents` (LangChain deepagentsjs)
-   against `@langchain/sandbox-standard-tests`, and the MCP Sentinel fixture as workload #1. If there's no
-   answer by ~2026-10-13, start the LangChain provider anyway.
+3. **M2.** `packages/deepagents` is done (above). Next: the MCP Sentinel fixture as workload #1; a live-model
+   deepagents run (like `examples/agent-demo`, a few cents on Fireworks); and the LangChain docs-listing PR
+   in M4, which needs the npm scope settled and the user's go-ahead. If Wasmer answers the framework
+   question, it may reorder this.
 4. **M3 hosting is undecided.** The plan says a results dashboard on Wasmer Edge. Wasmer launched
    StackMachine on 2026-10-05 (stackmachine.com; SDKs at github.com/stackmachine/sdks): a hosted
    platform for agents to deploy apps, volumes, Postgres/MySQL/SQLite, email, cron and usage metrics, all

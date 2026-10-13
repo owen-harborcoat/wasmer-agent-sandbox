@@ -1,0 +1,38 @@
+{
+  "name": "@owenota1337/wasmer-sandbox-deepagents",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Local Wasmer SDK sandboxes as a LangChain Deep Agents sandbox backend.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "wasmer-agent-sandbox-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "dependencies": {
+    "@owenota1337/wasmer-sandbox-core": "workspace:*"
+  },
+  "peerDependencies": {
+    "deepagents": ">=1.14.2"
+  },
+  "devDependencies": {
+    "@langchain/core": "1.2.17",
+    "@langchain/langgraph": "1.5.0",
+    "@langchain/langgraph-checkpoint": "1.2.0",
+    "@langchain/langgraph-sdk": "1.12.4",
+    "@langchain/sandbox-standard-tests": "2.0.1",
+    "@wasmer/sdk": "0.19.1",
+    "deepagents": "1.14.2",
+    "langchain": "1.5.16",
+    "langsmith": "0.9.0"
+  }
+}
