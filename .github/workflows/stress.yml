@@ -1,6 +1,8 @@
 # Manual: run the real-Wasmer suite many times in parallel to reproduce rare hangs or flakes.
 # First self-tests the watchdog against an idle and a blocked (Atomics.wait) Node process.
 name: Stress
+run-name: >-
+  Stress: ${{ inputs.job }}${{ inputs.job == 'worker-init-repro' && format(' {0}', inputs.repro_mode) || '' }}${{ inputs.job == 'node-script' && format(' {0}', inputs.script_args) || '' }}${{ inputs.job == 'suite' && inputs.vitest_args != '' && format(' {0}', inputs.vitest_args) || '' }}${{ inputs.sdk_run != '' && format(' (wasmer-sdk run {0})', inputs.sdk_run) || '' }}
 
 on:
   workflow_dispatch:
@@ -42,9 +44,13 @@ on:
       script_args:
         description: node-script only, the node command line after `node`, e.g. a spike script and its args
         default: ''
+      sdk_run:
+        description: A wasmer-sdk CI run id whose wasmer-sdk-js-<sha> build replaces the pinned @wasmer/sdk (wasmer-sdk keeps it 1 day)
+        default: ''
 
 permissions:
   contents: read
+  actions: read
 
 defaults:
   run:
@@ -96,6 +102,13 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: mkdir -p "$RUNNER_TEMP/results"
+      - name: Use @wasmer/sdk from wasmer-sdk CI run ${{ inputs.sdk_run }}
+        if: inputs.sdk_run != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SDK_RUN: ${{ inputs.sdk_run }}
+        run: .github/scripts/use-sdk-artifact.sh "$SDK_RUN" "$RUNNER_TEMP/results"
       # Restore (never save) the CI package cache: the scheduled hang happened with a warm cache.
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -104,7 +117,6 @@ jobs:
           restore-keys: |
             wasmer-${{ runner.os }}-node${{ matrix.node }}-
             wasmer-${{ runner.os }}-
-      - run: mkdir -p "$RUNNER_TEMP/results"
       - name: Real Wasmer sandboxes
         timeout-minutes: 10
         env:
@@ -141,6 +153,13 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: mkdir -p "$RUNNER_TEMP/results"
+      - name: Use @wasmer/sdk from wasmer-sdk CI run ${{ inputs.sdk_run }}
+        if: inputs.sdk_run != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SDK_RUN: ${{ inputs.sdk_run }}
+        run: .github/scripts/use-sdk-artifact.sh "$SDK_RUN" "$RUNNER_TEMP/results"
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .wasmer
@@ -148,7 +167,6 @@ jobs:
           restore-keys: |
             wasmer-${{ runner.os }}-node${{ matrix.node }}-
             wasmer-${{ runner.os }}-
-      - run: mkdir -p "$RUNNER_TEMP/results"
       # kill-close has segfaulted node. Cores stay on the runner (they hold process memory); only
       # the gdb summary is uploaded.
       - name: Enable core dumps
@@ -217,6 +235,13 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: mkdir -p "$RUNNER_TEMP/results"
+      - name: Use @wasmer/sdk from wasmer-sdk CI run ${{ inputs.sdk_run }}
+        if: inputs.sdk_run != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SDK_RUN: ${{ inputs.sdk_run }}
+        run: .github/scripts/use-sdk-artifact.sh "$SDK_RUN" "$RUNNER_TEMP/results"
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .wasmer
@@ -224,7 +249,6 @@ jobs:
           restore-keys: |
             wasmer-${{ runner.os }}-node${{ matrix.node }}-
             wasmer-${{ runner.os }}-
-      - run: mkdir -p "$RUNNER_TEMP/results"
       - name: Run script
         timeout-minutes: 17
         env:
