@@ -19,7 +19,15 @@ results=${2:?results dir}
 repo=wasmerio/wasmer-sdk
 mkdir -p "$results" .sdk-artifact
 
-read -r sha branch < <(gh api "repos/$repo/actions/runs/$run_id" --jq '"\(.head_sha) \(.head_branch)"')
+read -r sha branch head_repo event workflow conclusion < <(gh api "repos/$repo/actions/runs/$run_id" \
+  --jq '"\(.head_sha) \(.head_branch) \(.head_repository.full_name) \(.event) \(.path) \(.conclusion)"')
+# Only builds of wasmer-sdk's own main: a pull_request run from a fork also uploads this artifact,
+# built from code nobody reviewed.
+expected="$repo main push .github/workflows/ci.yml success"
+if [[ "$head_repo $branch $event $workflow $conclusion" != "$expected" ]]; then
+  echo "::error::run $run_id is $head_repo $branch $event $workflow $conclusion, expected $expected"
+  exit 1
+fi
 artifact="wasmer-sdk-js-$sha"
 work=".sdk-artifact/$sha"
 rm -rf "$work"
@@ -57,7 +65,7 @@ node -e '
   console.log(JSON.stringify(record));
 ' "$tarball" "$run_id" "$sha" "$branch" "$artifact" "$version" "$results/sdk-artifact.json"
 
-pnpm install --no-frozen-lockfile
+pnpm install --no-frozen-lockfile --ignore-scripts
 
 # Every workspace package that depends on the SDK must now resolve the tarball.
 for dir in packages/*/ examples/*/; do

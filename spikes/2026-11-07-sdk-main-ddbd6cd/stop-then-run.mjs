@@ -4,7 +4,8 @@
 // each, does `next`, then measures host CPU over 1 s twice (0–1 s and 2–3 s after `next`).
 //
 // Run from the repo root: node spikes/2026-11-07-sdk-main-ddbd6cd/stop-then-run.mjs <next> [guests] [shape] [stop]
-//   next:  nothing, echo-new (fresh sandbox runs `echo ok`, as starve.mjs does), echo-new-after-1s,
+//   next:  nothing, echo-new (fresh sandbox runs `echo ok`, as starve.mjs does), echo-new-after-<ms>
+//          (the same after a delay, e.g. echo-new-after-1000),
 //          echo-same (prints ok with the loop's own interpreter in the timed-out sandbox),
 //          close (close the timed-out sandbox),
 //          close-then-echo-new
@@ -70,7 +71,8 @@ for (let k = 1; k <= guests; k++) {
   const row = { k, stopped };
   const t = Date.now();
   if (next === 'echo-new') row.echo = await capped(echoNew(wasmer), 20000);
-  if (next === 'echo-new-after-1s') row.echo = await sleep(1000).then(() => capped(echoNew(wasmer), 20000));
+  const delay = /^echo-new-after-(\d+)$/.exec(next);
+  if (delay) row.echo = await sleep(Number(delay[1])).then(() => capped(echoNew(wasmer), 20000));
   if (next === 'echo-same') row.echo = await capped(echo(sandbox, [busy[1], busy[3]]), 20000);
   if (next === 'close' || next === 'close-then-echo-new') row.close = await capped(sandbox.close().then(() => 'done'), 15000);
   if (next === 'close-then-echo-new') row.echo = await capped(echoNew(wasmer), 20000);
