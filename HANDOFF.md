@@ -44,7 +44,7 @@ Target ~2026-11-07 (see PLAN.md for the four milestones).
   packages. **#556 is only half fixed:** a loop stopped by a timeout keeps its core and wedges `close()`
   if the next sandbox's command starts within a few ms, because the scheduler keys killed threads by
   `(pid, tid)` and every sandbox's first guest is `wasm-1.1`. The guest self-signal crash is unchanged.
-  Drafts for #556 and #547 in `upstream-drafts/08`, `09` (not posted).
+  Posted on #556 (the follow-up) and #547 (the numbers) on 2026-11-07, with the user's go-ahead.
 - **Node guests via Edge.js** (2026-10-11, the user wants to contribute to wasmerio/edgejs):
   `NODE_PACKAGE` (`wasmer/edgejs-quickjs@=0.2.5`) in core, 13 tests in `node.wasmer.test.ts`, and a Node
   warning in `session.description`. 96 real-Wasmer + 9 unit tests. Evidence and the Edge.js picture
@@ -63,9 +63,9 @@ repro and raw output, no templated sections (see the saved memory on public tone
 | wasmerio/wasmer-sdk#541 | Python guests need exnref (Node ≥ 22.19), `engines` says `>=20` | open, no reply. **We commented 2026-10-11**: `wasmer/edgejs` needs JSPI and panics the SDK on Node 22 |
 | wasmerio/wasmer-sdk#542 | `kill()` can terminate a worker holding the allocator lock; process hangs | **closed 2026-11-07** by syrusakbary via #578. **Verified on main ddbd6cd** (2026-11-07): kill-close 0 of 20 ubuntu jobs and 0 of 5 windows jobs hung (0.19.1: 4 of 20, 4 of 5), and 0 of 10 V8 CHECKs on Node 24 (0.19.1: 3 of 10). Not released. When it ships, try dropping `keep-client-open.ts` (one stress run for that change alone) |
 | wasmerio/wasmer-sdk#554 | **Our PR** (2026-10-07): sync fs calls (`stat`, `readDir`, `mkdir`, `remove`) return a plain Error that `WasmerError.is()` misses; switch them to `rethrowSync` | open, unreviewed, `BEHIND` main but mergeable. Still needed on main as of ddbd6cd: core `readDir`/`stat`/`mkdir`/`remove` are still sync (`pub fn ... -> Result`) and `index.ts` still wraps them in `rethrow(promise)`. Old red Browser check was their CI. When it ships, flip the pinned conformance test |
-| wasmerio/wasmer-sdk#547 | Not ours (tobowers): closed Edge.js sandboxes keep ~50 MB each | open. Fixed on SDK `main` (#579, #581–#584, #578) plus edgejs#180. syrusakbary remeasured on macOS only. **We measured main on ubuntu/windows runners and Windows 11** (2026-11-07): edgejs ~580–665 MB median after 60 sandboxes (0.19.1 ~1.9 GB), edgejs-quickjs ~445–514 MB (0.19.1 ~830–930), memory back on `close()`. Draft comment `upstream-drafts/09`, not posted |
+| wasmerio/wasmer-sdk#547 | Not ours (tobowers): closed Edge.js sandboxes keep ~50 MB each | open. Fixed on SDK `main` (#579, #581–#584, #578) plus edgejs#180. syrusakbary remeasured on macOS only. **We measured main on ubuntu/windows runners and Windows 11** (2026-11-07): edgejs ~580–665 MB median after 60 sandboxes (0.19.1 ~1.9 GB), edgejs-quickjs ~445–514 MB (0.19.1 ~830–930), memory back on `close()`. **We commented 2026-11-07** with the numbers (issuecomment-6717003176; `upstream-drafts/09`) |
 | wasmerio/wasmer-sdk#555 | **Ours** (2026-10-11): captured top-level stdio still reports a tty, the rest of wasmer#6425 | open. syrusakbary 2026-11-07: a Wasmer/WASIX issue, "big plans" for a proper fix. Nothing for us to do |
-| wasmerio/wasmer-sdk#556 | **Ours** (2026-10-11): `timeoutMs` and `kill()` don't stop a guest that never blocks; it keeps a core and `Wasmer.close()` hangs | **closed 2026-11-07** by #578. **Half fixed on main ddbd6cd**: a lone loop stops (~0.18 cores for the 500 ms grace, `close()` in ms), but a timed-out loop followed within a few ms by a command in another sandbox keeps its core and `close()` hangs, on all three hosts. Cause: scheduler `wasm_workers` keyed by `(pid, tid)`, every sandbox's first guest is `wasm-1.1`. Repro `spikes/2026-11-07-sdk-main-ddbd6cd/stop-then-run.mjs`. Draft follow-up `upstream-drafts/08`, not posted. Native SDKs: #580 + wasmerio/wasmer#7146 (open, Unix only) |
+| wasmerio/wasmer-sdk#556 | **Ours** (2026-10-11): `timeoutMs` and `kill()` don't stop a guest that never blocks; it keeps a core and `Wasmer.close()` hangs | **closed 2026-11-07** by #578. **Half fixed on main ddbd6cd**: a lone loop stops (~0.18 cores for the 500 ms grace, `close()` in ms), but a timed-out loop followed within a few ms by a command in another sandbox keeps its core and `close()` hangs, on all three hosts. Cause: scheduler `wasm_workers` keyed by `(pid, tid)`, every sandbox's first guest is `wasm-1.1`. Repro `spikes/2026-11-07-sdk-main-ddbd6cd/stop-then-run.mjs`. **We commented 2026-11-07** with the repro and scheduler logs (issuecomment-6717002985; `upstream-drafts/08`). Native SDKs: #580 + wasmerio/wasmer#7146 (open, Unix only) |
 | wasmerio/wasmer#7092 | **Ours** (2026-10-11): WASIX pipes have no file type, `fstat()` gives `st_mode 0` | open. Root cause of edgejs#166 |
 | wasmerio/edgejs#166 | **Ours** (2026-10-11): stdout/stdin are no-op streams when they're pipes | open. We offered a stopgap PR (`GuessHandleType`: unknown on fds 0–2 → `UV_FILE` under WASI). Wait for a maintainer to say yes before building it |
 | wasmerio/wasmer#6425 | guest stdio reports as a TTY (not ours) | **closed 2026-10-08** by its author after our comment. The remainder is wasmer-sdk#555 |
@@ -162,10 +162,10 @@ since `gh run view --log` returns nothing until the whole run finishes.
 
 Updated 2026-11-07, after testing SDK main:
 
-- **With the user's go-ahead:** push `sdk-main-artifact`'s evidence commit, fill the `<sha>` permalinks in
-  `upstream-drafts/08` and `09`, and post them (#556 follow-up, #547 numbers). Optionally a two-line
-  confirmation on #542. Then decide whether `stress.yml`'s `sdk_run` option and `use-sdk-artifact.sh` go
-  to `main` (they're reusable for every unreleased SDK build).
+- Done 2026-11-07: evidence pushed on `sdk-main-artifact` (18513f0, which the posted links point at) and
+  comments posted on #556 and #547. Watch #556 for a reply on the `(pid, tid)` race. Still open: the
+  optional #542 confirmation (`upstream-drafts/10`, ask first), and whether `stress.yml`'s `sdk_run`
+  option and `use-sdk-artifact.sh` go to `main`. Keep the branch: the posted links pin its commit.
 - When the next `@wasmer/sdk` ships: bump, rerun the comparison (suite stress, kill-close on Node 22 and
   24, `busy-loop.mjs`, `stop-then-run.mjs`, `leak.mjs` for both Edge.js packages, guest signals), then try
   the suite without `keep-client-open.ts`.
