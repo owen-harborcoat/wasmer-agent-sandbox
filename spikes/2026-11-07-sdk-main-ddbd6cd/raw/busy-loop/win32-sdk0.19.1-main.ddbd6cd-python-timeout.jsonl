@@ -1,0 +1,7 @@
+{"sdk":"0.19.1-main.ddbd6cd","node":"24.21.0","platform":"win32","osRelease":"10.0.26200","arch":"x64","cache":"warm","shape":"python","stop":"timeout","pkg":"python/python@=3.13.20"}
+{"idleCpuCores":0}
+{"returnedMs":1229,"exit":137,"reason":"timeout"}
+{"cpuCoresAfter":0.18}
+{"sandboxClose":"done","ms":0}
+{"wasmerClose":"done","ms":5}
+{"cpuCoresAfterClose":0.01}

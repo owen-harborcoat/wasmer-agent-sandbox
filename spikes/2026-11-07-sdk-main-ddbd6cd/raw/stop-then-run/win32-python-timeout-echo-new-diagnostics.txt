@@ -1,0 +1,15 @@
+{"sdk":"0.19.1-main.ddbd6cd","node":"24.21.0","platform":"win32","osRelease":"10.0.26200","arch":"x64","cache":"warm","cpus":24,"next":"echo-new","guests":2,"shape":"python","stop":"timeout"}
+[wasmer-scheduler] create worker=1 reason=wasm-1.1 busy=0 idle=0 wasm=0
+[wasmer-scheduler] create worker=2 reason=async busy=1 idle=0 wasm=1
+[wasmer-scheduler] idle worker=1 busy=0 idle=2 wasm=0
+{"k":0,"echo":{"exit":0,"stdout":"ok"},"cpuCores":0.05}
+[wasmer-scheduler] create worker=4 reason=async busy=2 idle=0 wasm=1
+[wasmer-scheduler] terminate wasm=1.1
+[wasmer-scheduler] idle worker=2 busy=1 idle=2 wasm=0
+{"k":1,"stopped":{"exit":137,"reason":"timeout"},"echo":{"exit":0,"stdout":"ok"},"nextMs":17,"cpu0to1s":1.19,"cpu2to3s":0.95}
+[wasmer-scheduler] create worker=5 reason=async busy=3 idle=0 wasm=1
+[wasmer-scheduler] terminate wasm=1.1
+[wasmer-scheduler] idle worker=4 busy=2 idle=2 wasm=0
+{"k":2,"stopped":{"exit":137,"reason":"timeout"},"echo":{"exit":0,"stdout":"ok"},"nextMs":13,"cpu0to1s":2.25,"cpu2to3s":1.98}
+[wasmer-scheduler] draining close busy=2 wasm=0
+{"wasmerClose":{"stalled":"no result after 15000 ms"},"ms":15002,"cpuAfterClose":1.98}

@@ -255,6 +255,29 @@ plus `ubuntu-24.04` and `windows-2025` CI (`stress.yml` `node-script` job).
   after wasmer#6425 was closed. `create_std_dev_inner` in lib/wasix stamps `CharacterDevice` on every
   stdio inode.
 
+## SDK main ddbd6cd (unreleased) on Windows and Linux (2026-11-07)
+
+Evidence: `spikes/2026-11-07-sdk-main-ddbd6cd/findings.md`. Wasmer fixed #542 and #556 (wasmer-sdk#578)
+and #547 (#579, #581–#584) on `main` on 2026-11-07, measured on macOS only. We tested wasmer-sdk CI
+run 42413101852's build, packed as `0.19.1-main.ddbd6cd` (`stress.yml -f sdk_run=<run id>`,
+`.github/scripts/use-sdk-artifact.sh`), on Windows 11 and on `ubuntu-24.04` / `windows-2025`.
+
+- **Suite:** 201/201 locally; suite stress 0 of 40 ubuntu jobs and 0 of 10 windows jobs stalled (0.19.1:
+  1 of 40). Every pin holds; #554 is still needed (core fs calls are still sync).
+- **#542 fixed on Linux and Windows:** kill-close repro, Node 22.23.0, 0 of 20 ubuntu jobs hung (0.19.1:
+  4 of 20) and 0 of 5 windows jobs (0.19.1: 4 of 5). On Node 24.21.0 main also stops setting off the V8
+  CHECK (nodejs/node#66366): 0 of 10 jobs, 0.19.1 3 of 10. Once released, try the suite without
+  `keep-client-open.ts`.
+- **#556 fixed for a lone loop** (~0.18 cores for the 500 ms grace, `close()` in ms, every shape), **but
+  not when the next command starts right after a timeout:** the scheduler keys killed threads by
+  `(pid, tid)`, every sandbox's first guest is `wasm-1.1`, and the next sandbox's command takes the key
+  before `TerminateWasmThread` is handled. The loop keeps a core and `close()` hangs, on all three hosts.
+  `stop-then-run.mjs`. Draft follow-up for #556 in `upstream-drafts/08`.
+- **#547 fixed** on both OSes and for `wasmer/edgejs-quickjs` too: ~445–720 MB after 60 sandboxes on
+  Node 24.21 (0.19.1: 0.8–2.5 GB), and memory comes back on `close()`. Draft in `upstream-drafts/09`.
+- **Guest self-signal crash not fixed:** self-term and child-self-term both 4 of 4 failed locally, and
+  16 of 16 CI jobs failed on ubuntu and windows (hangs, `memory access out of bounds`, `unreachable`).
+
 ## Repository layout (target)
 
 ```

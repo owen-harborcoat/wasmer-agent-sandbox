@@ -1,0 +1,6 @@
+{"sdk":"0.19.1-main.ddbd6cd","node":"24.21.0","platform":"win32","osRelease":"10.0.26200","arch":"x64","cache":"warm","cpus":24,"next":"echo-new-after-600","guests":3,"shape":"python","stop":"timeout"}
+{"k":0,"echo":{"exit":0,"stdout":"ok"},"cpuCores":0.09}
+{"k":1,"stopped":{"exit":137,"reason":"timeout"},"echo":{"exit":0,"stdout":"ok"},"nextMs":623,"cpu0to1s":0.23,"cpu2to3s":0}
+{"k":2,"stopped":{"exit":137,"reason":"timeout"},"echo":{"exit":0,"stdout":"ok"},"nextMs":620,"cpu0to1s":0.13,"cpu2to3s":0}
+{"k":3,"stopped":{"exit":137,"reason":"timeout"},"echo":{"exit":0,"stdout":"ok"},"nextMs":613,"cpu0to1s":0.05,"cpu2to3s":0}
+{"wasmerClose":"done","ms":5,"cpuAfterClose":0}

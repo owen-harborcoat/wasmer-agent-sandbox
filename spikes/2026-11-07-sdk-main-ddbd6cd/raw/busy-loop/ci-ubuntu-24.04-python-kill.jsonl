@@ -1,0 +1,7 @@
+{"sdk":"0.19.1-main.ddbd6cd","node":"24.21.0","platform":"linux","osRelease":"7.0.0-1017-azure","arch":"x64","cache":"warm","shape":"python","stop":"kill","pkg":"python/python@=3.13.20"}
+{"idleCpuCores":0.01}
+{"killReturnedMs":1099,"wait":"done"}
+{"cpuCoresAfter":0.2}
+{"sandboxClose":"done","ms":1}
+{"wasmerClose":"done","ms":1}
+{"cpuCoresAfterClose":0.01}

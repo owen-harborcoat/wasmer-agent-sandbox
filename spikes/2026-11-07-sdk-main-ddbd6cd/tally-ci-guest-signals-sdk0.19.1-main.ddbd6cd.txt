@@ -1,0 +1,17 @@
+# guest-signals repro on CI, SDK main ddbd6cd, Node 24.21.0, 20 iterations, one sandbox. Runs 42425084276 (self-term), 42425086715 (child-self-term). Windows hangs show as a 17-minute step timeout.
+child-self-term	ubuntu-24.04	crash(Error: command execution failed: RuntimeError: js: memory)	iters=3
+child-self-term	ubuntu-24.04	crash(Error: command execution failed: RuntimeError: js: memory)	iters=3
+child-self-term	ubuntu-24.04	hang	iters=3
+child-self-term	ubuntu-24.04	hang	iters=3
+self-term	ubuntu-24.04	hang	iters=1
+self-term	ubuntu-24.04	hang	iters=1
+self-term	ubuntu-24.04	hang	iters=1
+self-term	ubuntu-24.04	hang	iters=1
+child-self-term	windows-2025	hang(step timeout 17 min)	iters=1
+child-self-term	windows-2025	hang(step timeout 17 min)	iters=2
+child-self-term	windows-2025	hang(step timeout 17 min)	iters=2
+child-self-term	windows-2025	hang(step timeout 17 min)	iters=4
+self-term	windows-2025	crash(RuntimeError: unreachable)	iters=1
+self-term	windows-2025	hang(step timeout 17 min)	iters=1
+self-term	windows-2025	hang(step timeout 17 min)	iters=6
+self-term	windows-2025	hang(step timeout 17 min)	iters=8

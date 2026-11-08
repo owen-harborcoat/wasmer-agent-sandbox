@@ -1,0 +1,11 @@
+{"sdk":"0.19.1-main.ddbd6cd","node":"24.21.0","platform":"win32","osRelease":"10.0.26100","arch":"x64","cache":"warm","cpus":4,"max":8,"shape":"python"}
+{"k":0,"probe":{"exit":0,"stdout":"ok","ms":684},"cpuCores":0.03}
+{"k":1,"busy":{"exit":137,"reason":"timeout"},"probe":{"exit":0,"stdout":"ok","ms":12},"cpuCores":1.17}
+{"k":2,"busy":{"exit":137,"reason":"timeout"},"probe":{"exit":0,"stdout":"ok","ms":14},"cpuCores":2.08}
+{"k":3,"busy":{"exit":137,"reason":"timeout"},"probe":{"exit":0,"stdout":"ok","ms":28},"cpuCores":3.05}
+{"k":4,"busy":{"exit":137,"reason":"timeout"},"probe":{"exit":0,"stdout":"ok","ms":37},"cpuCores":3.69}
+{"k":5,"busy":{"exit":137,"reason":"timeout"},"probe":{"exit":0,"stdout":"ok","ms":36},"cpuCores":3.64}
+{"k":6,"busy":{"exit":137,"reason":"timeout"},"probe":{"exit":0,"stdout":"ok","ms":52},"cpuCores":3.81}
+{"k":7,"busy":{"exit":137,"reason":"timeout"},"probe":{"exit":0,"stdout":"ok","ms":74},"cpuCores":3.88}
+{"k":8,"busy":{"exit":137,"reason":"timeout"},"probe":{"exit":0,"stdout":"ok","ms":103},"cpuCores":3.92}
+{"otherClient":{"exit":0,"stdout":"ok","ms":1589},"cpuCores":3.77}

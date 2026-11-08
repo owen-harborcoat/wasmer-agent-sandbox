@@ -1,0 +1,77 @@
+# kill-close repro (iterations=30, processes=10). job / conclusion / kind / processes finished / sdk. Windows hangs show as a 27-minute step timeout (the watchdog doesn't kill on Windows).
+## run 42425055114
+repro / ubuntu-24.04 / Node 22.23.0 / 1	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 10	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 11	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 12	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 13	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 14	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 15	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 16	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 17	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 18	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 19	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 2	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 20	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 3	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 4	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 5	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 6	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 7	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 8	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 22.23.0 / 9	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+## run 37680065612
+repro / ubuntu-24.04 / Node 22.23.0 / 1	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 22.23.0 / 10	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 22.23.0 / 11	failure	watchdog-hang	procs_done=6	
+repro / ubuntu-24.04 / Node 22.23.0 / 12	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 22.23.0 / 13	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 22.23.0 / 14	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 22.23.0 / 15	failure	watchdog-hang	procs_done=6	
+repro / ubuntu-24.04 / Node 22.23.0 / 16	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 22.23.0 / 17	failure	watchdog-hang	procs_done=4	
+repro / ubuntu-24.04 / Node 22.23.0 / 18	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 22.23.0 / 19	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 22.23.0 / 2	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 22.23.0 / 20	failure	watchdog-hang	procs_done=0	
+repro / ubuntu-24.04 / Node 22.23.0 / 3	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 22.23.0 / 4	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 22.23.0 / 5	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 22.23.0 / 6	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 22.23.0 / 7	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 22.23.0 / 8	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 22.23.0 / 9	success	ok	procs_done=10	
+## run 42425057716
+repro / windows-2025 / Node 22.23.0 / 1	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / windows-2025 / Node 22.23.0 / 2	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / windows-2025 / Node 22.23.0 / 3	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / windows-2025 / Node 22.23.0 / 4	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / windows-2025 / Node 22.23.0 / 5	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+## run 42425060096
+repro / windows-2025 / Node 22.23.0 / 1	failure	hang(step timeout 27 min)	procs_done=3	
+repro / windows-2025 / Node 22.23.0 / 2	failure	hang(step timeout 27 min)	procs_done=1	
+repro / windows-2025 / Node 22.23.0 / 3	failure	hang(step timeout 27 min)	procs_done=1	
+repro / windows-2025 / Node 22.23.0 / 4	failure	hang(step timeout 27 min)	procs_done=4	
+repro / windows-2025 / Node 22.23.0 / 5	success	ok	procs_done=10	
+## run 42426049503
+repro / ubuntu-24.04 / Node 24.21.0 / 1	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 24.21.0 / 10	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 24.21.0 / 2	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 24.21.0 / 3	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 24.21.0 / 4	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 24.21.0 / 5	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 24.21.0 / 6	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 24.21.0 / 7	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 24.21.0 / 8	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+repro / ubuntu-24.04 / Node 24.21.0 / 9	success	ok	procs_done=10	"version":"0.19.1-main.ddbd6cd"
+## run 42426051645
+repro / ubuntu-24.04 / Node 24.21.0 / 1	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 24.21.0 / 10	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 24.21.0 / 2	failure	CHECK	procs_done=6	
+repro / ubuntu-24.04 / Node 24.21.0 / 3	failure	CHECK	procs_done=4	
+repro / ubuntu-24.04 / Node 24.21.0 / 4	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 24.21.0 / 5	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 24.21.0 / 6	failure	CHECK	procs_done=6	
+repro / ubuntu-24.04 / Node 24.21.0 / 7	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 24.21.0 / 8	success	ok	procs_done=10	
+repro / ubuntu-24.04 / Node 24.21.0 / 9	success	ok	procs_done=10	

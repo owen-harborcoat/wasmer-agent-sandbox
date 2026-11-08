@@ -1,0 +1,5 @@
+{"sdk":"0.19.1-main.ddbd6cd","node":"24.21.0","platform":"win32","osRelease":"10.0.26200","arch":"x64","cache":"warm","shape":"self-term","iterations":20,"scope":"same"}
+{"i":0,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":254}
+{"i":1,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":36}
+{"i":2,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":31}
+{"i":3,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":54}

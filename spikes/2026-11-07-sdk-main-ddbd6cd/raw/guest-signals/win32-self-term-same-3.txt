@@ -1,0 +1,9 @@
+{"sdk":"0.19.1-main.ddbd6cd","node":"24.21.0","platform":"win32","osRelease":"10.0.26200","arch":"x64","cache":"warm","shape":"self-term","iterations":20,"scope":"same"}
+{"i":0,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":187}
+{"i":1,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":47}
+{"i":2,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":30}
+{"i":3,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":48}
+{"i":4,"exitCode":137,"reason":"timeout","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":10060}
+{"i":5,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":45}
+{"i":6,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":33}
+{"i":7,"exitCode":27,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":46}

@@ -1,0 +1,16 @@
+self-term same run=1 outcome=hang completed_iterations=4 exit=124
+self-term same run=2 outcome=crash(Error [RuntimeError]: unreachable) completed_iterations=1 exit=1
+self-term same run=3 outcome=hang completed_iterations=8 exit=124
+self-term same run=4 outcome=hang completed_iterations=1 exit=124
+child-self-term same run=1 outcome=hang completed_iterations=5 exit=124
+child-self-term same run=2 outcome=crash(Error: command execution failed: RuntimeError: ) completed_iterations=3 exit=1
+child-self-term same run=3 outcome=crash(Error [RuntimeError]: operation does not support unaligned acc) completed_iterations=20 exit=1
+child-self-term same run=4 outcome=hang completed_iterations=3 exit=124
+host-terminate same run=1 outcome=done completed_iterations=20 exit=0
+host-terminate same run=2 outcome=done completed_iterations=20 exit=0
+host-terminate same run=3 outcome=done completed_iterations=20 exit=0
+host-terminate same run=4 outcome=done completed_iterations=20 exit=0
+control same run=1 outcome=done completed_iterations=20 exit=0
+control same run=2 outcome=done completed_iterations=20 exit=0
+control same run=3 outcome=done completed_iterations=20 exit=0
+control same run=4 outcome=done completed_iterations=20 exit=0

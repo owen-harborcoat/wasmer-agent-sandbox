@@ -1,0 +1,80 @@
+{"sdk":"0.19.1-main.ddbd6cd","node":"24.21.0","platform":"win32","osRelease":"10.0.26200","arch":"x64","cache":"warm","shape":"child-self-term","iterations":20,"scope":"same"}
+{"i":0,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":220}
+{"i":1,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":37}
+{"i":2,"exitCode":0,"reason":"exited","stderr":"Program recieved termination signal: Terminated","followUp":"ok","ms":84}
+node_modules/.pnpm/@wasmer+sdk@file+.sdk-artif_7130ef9b00b13bc47d889c2f67dfd3e2/node_modules/@wasmer/sdk/dist/index.js:79
+            return new WasmerError(error.message, code, {
+                   ^
+
+WasmerError: command execution failed: RuntimeError: js: memory access out of bounds
+RuntimeError: memory access out of bounds
+    at wasm://wasm/01352076:wasm-function[489]:0x128b6b
+    at wasm://wasm/00721a12:wasm-function[1534]:0x159f69
+    at wasm://wasm/00721a12:wasm-function[371]:0x54540
+    at wasm://wasm/00721a12:wasm-function[228]:0x315be
+    at wasm://wasm/00721a12:wasm-function[227]:0x2d385
+    at wasm://wasm/00721a12:wasm-function[228]:0x34b02
+    at wasm://wasm/00721a12:wasm-function[813]:0xbc84e
+    at wasm://wasm/00721a12:wasm-function[57]:0x8877
+    at node_modules/.pnpm/@wasmer+sdk@file+.sdk-artif_7130ef9b00b13bc47d889c2f67dfd3e2/node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:1442:33
+    at handleError (node_modules/.pnpm/@wasmer+sdk@file+.sdk-artif_7130ef9b00b13bc47d889c2f67dfd3e2/node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:3055:18)
+    at __wbg_apply_23dd4d2439189415 (node_modules/.pnpm/@wasmer+sdk@file+.sdk-artif_7130ef9b00b13bc47d889c2f67dfd3e2/node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:1441:59)
+    at wasm://wasm/01352076:wasm-function[6901]:0x434d1f
+    at wasm://wasm/01352076:wasm-function[981]:0x265103
+    at wasm://wasm/01352076:wasm-function[494]:0x137948
+    at wasm://wasm/01352076:wasm-function[412]:0x8ebcf
+    at wasm://wasm/01352076:wasm-function[591]:0x18ed1b
+    at wasm://wasm/01352076:wasm-function[456]:0xfa734
+    at wasm://wasm/01352076:wasm-function[967]:0x260a3e
+    at wasm://wasm/01352076:wasm-function[2098]:0x3532d9
+    at wasm://wasm/01352076:wasm-function[3026]:0x3c4567
+    at wasm://wasm/01352076:wasm-function[5027]:0x419860
+    at wasm://wasm/01352076:wasm-function[6490]:0x42e53a
+    at wasm_bindgen_8574287c74105d19___convert__closures_____invoke___wasm_bindgen_8574287c74105d19___JsValue__core_f20a151542355c79___result__Result_____wasm_bindgen_8574287c74105d19___JsError___true_ (node_modules/.pnpm/@wasmer+sdk@file+.sdk-artif_7130ef9b00b13bc47d889c2f67dfd3e2/node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:2833:22)
+    at real (node_modules/.pnpm/@wasmer+sdk@file+.sdk-artif_7130ef9b00b13bc47d889c2f67dfd3e2/node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:3102:20)
+    at toWasmerError (node_modules/.pnpm/@wasmer+sdk@file+.sdk-artif_7130ef9b00b13bc47d889c2f67dfd3e2/node_modules/@wasmer/sdk/dist/index.js:79:20)
+    at rethrow (node_modules/.pnpm/@wasmer+sdk@file+.sdk-artif_7130ef9b00b13bc47d889c2f67dfd3e2/node_modules/@wasmer/sdk/dist/index.js:62:15)
+    at async Command.run (node_modules/.pnpm/@wasmer+sdk@file+.sdk-artif_7130ef9b00b13bc47d889c2f67dfd3e2/node_modules/@wasmer/sdk/dist/index.js:868:40)
+    at async spikes/2026-10-06-sdk-0.18-guest-signals/repro.mjs:51:14 {
+  code: 'EXECUTION_ERROR',
+  [cause]: Error [WasmerError]: command execution failed: RuntimeError: js: memory access out of bounds
+  RuntimeError: memory access out of bounds
+      at wasm://wasm/01352076:wasm-function[489]:0x128b6b
+      at wasm://wasm/00721a12:wasm-function[1534]:0x159f69
+      at wasm://wasm/00721a12:wasm-function[371]:0x54540
+      at wasm://wasm/00721a12:wasm-function[228]:0x315be
+      at wasm://wasm/00721a12:wasm-function[227]:0x2d385
+      at wasm://wasm/00721a12:wasm-function[228]:0x34b02
+      at wasm://wasm/00721a12:wasm-function[813]:0xbc84e
+      at wasm://wasm/00721a12:wasm-function[57]:0x8877
+      at node_modules/.pnpm/@wasmer+sdk@file+.sdk-artif_7130ef9b00b13bc47d889c2f67dfd3e2/node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:1442:33
+      at handleError (node_modules/.pnpm/@wasmer+sdk@file+.sdk-artif_7130ef9b00b13bc47d889c2f67dfd3e2/node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:3055:18)
+      at __wbg_apply_23dd4d2439189415 (node_modules/.pnpm/@wasmer+sdk@file+.sdk-artif_7130ef9b00b13bc47d889c2f67dfd3e2/node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:1441:59)
+      at wasm://wasm/01352076:wasm-function[6901]:0x434d1f
+      at wasm://wasm/01352076:wasm-function[981]:0x265103
+      at wasm://wasm/01352076:wasm-function[494]:0x137948
+      at wasm://wasm/01352076:wasm-function[412]:0x8ebcf
+      at wasm://wasm/01352076:wasm-function[591]:0x18ed1b
+      at wasm://wasm/01352076:wasm-function[456]:0xfa734
+      at wasm://wasm/01352076:wasm-function[967]:0x260a3e
+      at wasm://wasm/01352076:wasm-function[2098]:0x3532d9
+      at wasm://wasm/01352076:wasm-function[3026]:0x3c4567
+      at wasm://wasm/01352076:wasm-function[5027]:0x419860
+      at wasm://wasm/01352076:wasm-function[6490]:0x42e53a
+      at wasm_bindgen_8574287c74105d19___convert__closures_____invoke___wasm_bindgen_8574287c74105d19___JsValue__core_f20a151542355c79___result__Result_____wasm_bindgen_8574287c74105d19___JsError___true_ (node_modules/.pnpm/@wasmer+sdk@file+.sdk-artif_7130ef9b00b13bc47d889c2f67dfd3e2/node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:2833:22)
+      at real (node_modules/.pnpm/@wasmer+sdk@file+.sdk-artif_7130ef9b00b13bc47d889c2f67dfd3e2/node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:3102:20)
+      at __wbg_new_b667d279fd5aa943 (node_modules/.pnpm/@wasmer+sdk@file+.sdk-artif_7130ef9b00b13bc47d889c2f67dfd3e2/node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:2098:25)
+      at wasm://wasm/01352076:wasm-function[7205]:0x437b5b
+      at wasm://wasm/01352076:wasm-function[3923]:0x3f8981
+      at wasm://wasm/01352076:wasm-function[2283]:0x369c04
+      at wasm://wasm/01352076:wasm-function[501]:0x140746
+      at wasm://wasm/01352076:wasm-function[2098]:0x3532d9
+      at wasm://wasm/01352076:wasm-function[6418]:0x42dc6b
+      at wasm://wasm/01352076:wasm-function[6948]:0x43535a
+      at wasm://wasm/01352076:wasm-function[7685]:0x43afff
+      at wasm_bindgen_8574287c74105d19___convert__closures_____invoke___wasm_bindgen_8574287c74105d19___JsValue______true_ (node_modules/.pnpm/@wasmer+sdk@file+.sdk-artif_7130ef9b00b13bc47d889c2f67dfd3e2/node_modules/@wasmer/sdk/pkg/wasmer_sdk_js.js:2816:10) {
+    code: 'EXECUTION_ERROR'
+  }
+}
+
+Node.js v24.21.0

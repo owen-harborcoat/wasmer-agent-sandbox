@@ -21,6 +21,8 @@ const require = createRequire(new URL('../../packages/core/package.json', import
 const entry = require.resolve('@wasmer/sdk/node');
 const sdk = JSON.parse(readFileSync(join(dirname(entry), '..', 'package.json'), 'utf8')).version;
 const cache = existsSync('.wasmer/cache-v1') ? 'warm' : 'cold';
+// SDK main's scheduler logs worker assignment and kills to stderr when this global is set.
+if (process.env.WASMER_SCHEDULER_DIAGNOSTICS) globalThis.__wasmerSchedulerDiagnostics = true;
 const { Wasmer } = await import(pathToFileURL(entry).href);
 
 const next = process.argv[2] ?? 'echo-new';
