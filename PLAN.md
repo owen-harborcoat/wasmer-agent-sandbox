@@ -277,6 +277,7 @@ run 42413101852's build, packed as `0.19.1-main.ddbd6cd` (`stress.yml -f sdk_run
   Node 24.21 (0.19.1: 0.8–2.5 GB), and memory comes back on `close()`. Draft in `upstream-drafts/09`.
 - **Guest self-signal crash not fixed:** self-term and child-self-term both 4 of 4 failed locally, and
   16 of 16 CI jobs failed on ubuntu and windows (hangs, `memory access out of bounds`, `unreachable`).
+  Filed as wasmerio/wasmer-sdk#586 on 2026-11-08.
 
 ## Repository layout (target)
 
